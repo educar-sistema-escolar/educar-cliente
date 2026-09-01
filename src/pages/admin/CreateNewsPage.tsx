@@ -28,7 +28,7 @@ function readFileAsDataUrl(file: File) {
   });
 }
 
-export const CrearNoticiaPage: React.FC = () => {
+export const CreateNewsPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const isEditMode = Boolean(id);

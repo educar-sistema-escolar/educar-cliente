@@ -11,7 +11,6 @@ interface FAQ {
   answer: string;
 }
 
-// COMPONENTE ENVOLVENTE PARA EL EFECTO DE DESPLIEGUE AL HACER SCROLL
 const ScrollReveal: React.FC<{ children: React.ReactNode; delay?: string }> = ({ children, delay = 'duration-700' }) => {
   const [isIntersecting, setIsIntersecting] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -52,72 +51,72 @@ const ScrollReveal: React.FC<{ children: React.ReactNode; delay?: string }> = ({
   );
 };
 
+const pilares = [
+  { icon: <Brain size={26} />, title: 'Gabinete Psicopedagógico', desc: 'Apoyo emocional y orientación escolar personalizada para superar desafíos de aprendizaje.' },
+  { icon: <Heart size={26} />, title: 'Salud y Nutrición', desc: 'Seguimiento de hábitos saludables, coordinación de la enfermería y menús del comedor.' },
+  { icon: <Trophy size={26} />, title: 'Actividades Extracurriculares', desc: 'Talleres formativos, disciplinas artísticas y proyectos de fuerte impacto comunitario.' },
+  { icon: <BookOpen size={26} />, title: 'Tutorías', desc: 'Espacios de refuerzo personalizado para consolidar los objetivos académicos individuales.' },
+];
+
+const servicios = [
+  { icon: <Users size={26} />, title: 'Acompañamiento Estudiantil', desc: 'Orientación psicopedagógica y talleres de contención emocional para los alumnos.' },
+  { icon: <Stethoscope size={26} />, title: 'Enfermería', desc: 'Atención primaria de salud y asistencia inmediata ante cualquier eventualidad médica.' },
+  { icon: <Utensils size={26} />, title: 'Comedor Escolar', desc: 'Menús balanceados y supervisados por especialistas para un óptimo desarrollo.' },
+  { icon: <Trophy size={26} />, title: 'Actividades Deportivas', desc: 'Fomento de la salud física, el compañerismo y la disciplina a través del deporte.' },
+  { icon: <Bus size={26} />, title: 'Transporte Escolar', desc: 'Servicio seguro, regulado y coordinado para la tranquilidad de las familias.' },
+  { icon: <ShieldCheck size={26} />, title: 'Espacios Seguros', desc: 'Ambientes e infraestructura diseñados para garantizar una convivencia sana y protegida.' },
+];
+
+const tabsCrecimiento = [
+  {
+    id: 'Académico',
+    label: 'Académico',
+    icon: <GraduationCap size={20} />,
+    title: 'Excelencia y Desarrollo Cognitivo',
+    desc: 'Nos enfocamos en brindar herramientas clave para el autoaprendizaje continuo, estimulando el pensamiento crítico, la curiosidad científica y el máximo rendimiento pedagógico adaptado a cada etapa del estudiante.',
+    colorClass: 'text-edu-primary bg-edu-secondary/10 border-edu-secondary/30',
+    accentBg: 'bg-edu-primary'
+  },
+  {
+    id: 'Emocional',
+    label: 'Emocional',
+    icon: <Smile size={20} />,
+    title: 'Acompañamiento y Resiliencia',
+    desc: 'Gestionamos espacios seguros para el autoconocimiento, la inteligencia emocional y el desarrollo de la autoestima. Nuestro equipo psicopedagógico acompaña activamente para contener y dotar de herramientas de resolución afectiva.',
+    colorClass: 'text-edu-magenta bg-edu-magenta/10 border-edu-magenta/25',
+    accentBg: 'bg-edu-magenta'
+  },
+  {
+    id: 'Social',
+    label: 'Social',
+    icon: <MessageSquare size={20} />,
+    title: 'Convivencia y Sentido de Comunidad',
+    desc: 'Fomentamos la construcción de vínculos sanos, la empatía, los valores ciudadanos y el trabajo colaborativo. Impulsamos actividades colectivas donde cada estudiante aprende el valor del respeto mutuo y la vida en sociedad.',
+    colorClass: 'text-edu-secondary-dark bg-edu-secondary/10 border-edu-secondary/30',
+    accentBg: 'bg-edu-secondary-dark'
+  },
+  {
+    id: 'Físico',
+    label: 'Físico',
+    icon: <Activity size={20} />,
+    title: 'Hábitos Saludables y Vitalidad',
+    desc: 'Promovemos el bienestar corporal a través de la educación física, disciplinas deportivas y una nutrición balanceada. Entendemos el movimiento y el cuidado del cuerpo como pilares fundamentales para un cerebro activo y sano.',
+    colorClass: 'text-edu-accent-warm bg-edu-accent-warm/10 border-edu-accent-warm/30',
+    accentBg: 'bg-edu-accent-warm'
+  }
+];
+
+const faqs: FAQ[] = [
+  { question: '¿Cómo solicito una entrevista con psicopedagogía?', answer: 'Podés solicitarla directamente a través de nuestro portal de acceso privado o en la secretaría del colegio. Los turnos de orientación se confirman en un plazo de 48 horas hábiles.' },
+  { question: '¿Cuáles son los horarios del comedor?', answer: 'El comedor escolar funciona de lunes a viernes en dos turnos: de 12:00 a 13:00 para nivel inicial y primario, y de 13:00 a 14:00 para nivel secundario.' },
+  { question: '¿Cómo me anoto en actividades extracurriculares?', answer: 'La inscripción se realiza de manera online durante las primeras tres semanas de cada cuatrimestre a través del portal académico.' },
+  { question: '¿Quién puede solicitar tutoría de apoyo?', answer: 'Abierto a todos los estudiantes, ya sea por recomendación docente o petición directa de las familias.' },
+];
+
 export const BienestarPage: React.FC = () => {
-  const pilares = [
-    { icon: <Brain size={26} />, title: 'Gabinete Psicopedagógico', desc: 'Apoyo emocional y orientación escolar personalizada para superar desafíos de aprendizaje.' },
-    { icon: <Heart size={26} />, title: 'Salud y Nutrición', desc: 'Seguimiento de hábitos saludables, coordinación de la enfermería y menús del comedor.' },
-    { icon: <Trophy size={26} />, title: 'Actividades Extracurriculares', desc: 'Talleres formativos, disciplinas artísticas y proyectos de fuerte impacto comunitario.' },
-    { icon: <BookOpen size={26} />, title: 'Tutorías', desc: 'Espacios de refuerzo personalizado para consolidar los objetivos académicos individuales.' },
-  ];
-
-  const servicios = [
-    { icon: <Users size={26} />, title: 'Acompañamiento Estudiantil', desc: 'Orientación psicopedagógica y talleres de contención emocional para los alumnos.' },
-    { icon: <Stethoscope size={26} />, title: 'Enfermería', desc: 'Atención primaria de salud y asistencia inmediata ante cualquier eventualidad médica.' },
-    { icon: <Utensils size={26} />, title: 'Comedor Escolar', desc: 'Menús balanceados y supervisados por especialistas para un óptimo desarrollo.' },
-    { icon: <Trophy size={26} />, title: 'Actividades Deportivas', desc: 'Fomento de la salud física, el compañerismo y la disciplina a través del deporte.' },
-    { icon: <Bus size={26} />, title: 'Transporte Escolar', desc: 'Servicio seguro, regulado y coordinado para la tranquilidad de las familias.' },
-    { icon: <ShieldCheck size={26} />, title: 'Espacios Seguros', desc: 'Ambientes e infraestructura diseñados para garantizar una convivencia sana y protegida.' },
-  ];
-
   const [activePilar, setActivePilar] = useState<string>('Académico');
 
-  const tabsCrecimiento = [
-    { 
-      id: 'Académico', 
-      label: 'Académico', 
-      icon: <GraduationCap size={20} />, 
-      title: 'Excelencia y Desarrollo Cognitivo',
-      desc: 'Nos enfocamos en brindar herramientas clave para el autoaprendizaje continuo, estimulando el pensamiento crítico, la curiosidad científica y el máximo rendimiento pedagógico adaptado a cada etapa del estudiante.',
-      colorClass: 'text-edu-primary bg-edu-secondary/10 border-edu-secondary/30',
-      accentBg: 'bg-edu-primary'
-    },
-    { 
-      id: 'Emocional', 
-      label: 'Emocional', 
-      icon: <Smile size={20} />, 
-      title: 'Acompañamiento y Resiliencia',
-      desc: 'Gestionamos espacios seguros para el autoconocimiento, la inteligencia emocional y el desarrollo de la autoestima. Nuestro equipo psicopedagógico acompaña activamente para contener y dotar de herramientas de resolución afectiva.',
-      colorClass: 'text-edu-magenta bg-edu-magenta/10 border-edu-magenta/25',
-      accentBg: 'bg-edu-magenta'
-    },
-    { 
-      id: 'Social', 
-      label: 'Social', 
-      icon: <MessageSquare size={20} />, 
-      title: 'Convivencia y Sentido de Comunidad',
-      desc: 'Fomentamos la construcción de vínculos sanos, la empatía, los valores ciudadanos y el trabajo colaborativo. Impulsamos actividades colectivas donde cada estudiante aprende el valor del respeto mutuo y la vida en sociedad.',
-      colorClass: 'text-edu-secondary-dark bg-edu-secondary/10 border-edu-secondary/30',
-      accentBg: 'bg-edu-secondary-dark'
-    },
-    { 
-      id: 'Físico', 
-      label: 'Físico', 
-      icon: <Activity size={20} />, 
-      title: 'Hábitos Saludables y Vitalidad',
-      desc: 'Promovemos el bienestar corporal a través de la educación física, disciplinas deportivas y una nutrición balanceada. Entendemos el movimiento y el cuidado del cuerpo como pilares fundamentales para un cerebro activo y sano.',
-      colorClass: 'text-edu-accent-warm bg-edu-accent-warm/10 border-edu-accent-warm/30',
-      accentBg: 'bg-edu-accent-warm'
-    }
-  ];
-
   const currentPilarData = tabsCrecimiento.find(t => t.id === activePilar) || tabsCrecimiento[0];
-
-  const faqs: FAQ[] = [
-    { question: '¿Cómo solicito una entrevista con psicopedagogía?', answer: 'Podés solicitarla directamente a través de nuestro portal de acceso privado o en la secretaría del colegio. Los turnos de orientación se confirman en un plazo de 48 horas hábiles.' },
-    { question: '¿Cuáles son los horarios del comedor?', answer: 'El comedor escolar funciona de lunes a viernes en dos turnos: de 12:00 a 13:00 para nivel inicial y primario, y de 13:00 a 14:00 para nivel secundario.' },
-    { question: '¿Cómo me anoto en actividades extracurriculares?', answer: 'La inscripción se realiza de manera online durante las primeras tres semanas de cada cuatrimestre a través del portal académico.' },
-    { question: '¿Quién puede solicitar tutoría de apoyo?', answer: 'Abierto a todos los estudiantes, ya sea por recomendación docente o petición directa de las familias.' },
-  ];
 
   const [openFAQIndex, setOpenFAQIndex] = useState<number | null>(0);
 
@@ -138,7 +137,6 @@ export const BienestarPage: React.FC = () => {
 
       <div className="animate-page-fade">
         
-        {/* Sección Hero (Carga directo con la página) */}
         <section className="bg-gradient-to-br from-edu-primary to-edu-secondary text-white py-24 px-4 text-center relative overflow-hidden">
           <img src={imagenHero} alt="" className='absolute inset-0 w-full h-full object-cover opacity-25 scale-105' />
           <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30" />
@@ -151,7 +149,6 @@ export const BienestarPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Sección: Compromiso (Efecto de despliegue) */}
         <section className="py-16 bg-slate-50 border-b border-slate-300/50">
           <ScrollReveal delay="duration-500">
             <div className="max-w-3xl mx-auto px-4 text-center relative">
@@ -167,7 +164,6 @@ export const BienestarPage: React.FC = () => {
           </ScrollReveal>
         </section>
 
-        {/* SECCIÓN: CRECIMIENTO INTEGRAL (Efecto de despliegue) */}
         <section className="py-20 max-w-5xl mx-auto px-4">
           <ScrollReveal>
             <div className="text-center max-w-2xl mx-auto mb-12">
@@ -217,7 +213,6 @@ export const BienestarPage: React.FC = () => {
           </ScrollReveal>
         </section>
 
-        {/* ÁREAS DE APOYO ESCOLAR (Efecto de despliegue) */}
         <section className="py-20 bg-slate-50/60 border-t border-b border-slate-300/50">
           <div className="max-w-6xl mx-auto px-4">
             <ScrollReveal>
@@ -251,7 +246,6 @@ export const BienestarPage: React.FC = () => {
           </div>
         </section>
 
-        {/* NUESTROS SERVICIOS (Efecto de despliegue) */}
         <section className="py-20 bg-white">
           <div className="max-w-6xl mx-auto px-4">
             <ScrollReveal>
@@ -285,7 +279,6 @@ export const BienestarPage: React.FC = () => {
           </div>
         </section>
 
-        {/* FRASE INSTITUCIONAL DESTACADA (Efecto de despliegue) */}
         <section className="relative py-24 bg-slate-950 text-white overflow-hidden shadow-2xl">
           <img src={imagenHero} alt="" className="absolute inset-0 w-full h-full object-cover opacity-10 mix-blend-overlay scale-110 blur-[1px]" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-slate-900/60" />
@@ -300,7 +293,6 @@ export const BienestarPage: React.FC = () => {
           </div>
         </section>
 
-        {/* SECCIÓN FAQ (Efecto de despliegue) */}
         <section className="py-20 max-w-4xl mx-auto px-4 bg-white">
           <ScrollReveal>
             <div className="text-center mb-12">

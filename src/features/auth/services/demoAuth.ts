@@ -218,7 +218,6 @@ export function markStudentAccountCreated(dni: string) {
 export function getInstitutionalStudentByDni(dni: string) {
   const normalizedDni = normalizeDni(dni);
 
-  // Check the hardcoded institutional data first
   const staticStudent = institutionalStudents.find((item) => item.dni === normalizedDni);
 
   if (staticStudent) {

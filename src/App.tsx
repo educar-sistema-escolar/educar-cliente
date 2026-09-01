@@ -15,11 +15,11 @@ import { ActivitiesPage } from './pages/admin/ActivitiesPage';
 import { CommentsModerationPage } from './pages/admin/CommentsModerationPage';
 import { ScrollToTop } from './shared/components/ScrollToTop';
 import { AdminLayout } from './pages/admin/AdminLayout';
-import { GestionNoticiasPage } from './pages/admin/GestionNoticiasPage';
-import { CrearNoticiaPage } from './pages/admin/CrearNoticiaPage';
+import { NewsManagementPage } from './pages/admin/NewsManagementPage';
+import { CreateNewsPage } from './pages/admin/CreateNewsPage';
 import { EnrollmentRequestsPage } from './pages/admin/EnrollmentRequestsPage';
 import { OpinionModerationPage } from './pages/admin/OpinionModerationPage';
-import { CuentasDelSistemaPage } from './pages/admin/CuentasDelSistemaPage';
+import { SystemAccountsPage } from './pages/admin/SystemAccountsPage';
 import { ForoLayout } from './pages/foro/ForoLayout';
 import { ForoFeedPage } from './pages/foro/ForoFeedPage';
 import { StudentActivitiesPage } from './pages/student/StudentActivitiesPage';
@@ -88,10 +88,10 @@ function App() {
           <Route index element={<Navigate to="solicitudes" replace />} />
           <Route path="solicitudes" element={<EnrollmentRequestsPage />} />
           <Route path="opiniones" element={<OpinionModerationPage />} />
-          <Route path="noticias" element={<GestionNoticiasPage />} />
-          <Route path="crear-noticia" element={<CrearNoticiaPage />} />
-          <Route path="editar-noticia/:id" element={<CrearNoticiaPage />} />
-          <Route path="cuentas" element={<CuentasDelSistemaPage />} />
+          <Route path="noticias" element={<NewsManagementPage />} />
+          <Route path="crear-noticia" element={<CreateNewsPage />} />
+          <Route path="editar-noticia/:id" element={<CreateNewsPage />} />
+          <Route path="cuentas" element={<SystemAccountsPage />} />
           <Route path="actividades" element={<ActivitiesPage />} />
           <Route path="comentarios" element={<CommentsModerationPage />} />
         </Route>

@@ -15,7 +15,7 @@ import {
 import { newsStore } from '../../features/noticias/services/newsStore';
 import type { Article } from '../../features/noticias/services/newsStore';
 
-export const GestionNoticiasPage: React.FC = () => {
+export const NewsManagementPage: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Todas');

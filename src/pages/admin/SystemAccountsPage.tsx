@@ -31,7 +31,7 @@ const roleColors: Record<string, string> = {
   authority: 'bg-violet-50 text-violet-700 border border-violet-200/50',
 };
 
-export const CuentasDelSistemaPage: React.FC = () => {
+export const SystemAccountsPage: React.FC = () => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
