@@ -49,10 +49,10 @@ export const ActivitiesPage: React.FC = () => {
 
   const activities = useMemo(() => listActivities(), [version]);
 
-  const filtered = activities.filter(a => {
-    const matchSearch = a.name.toLowerCase().includes(search.toLowerCase()) ||
-      a.instructor.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === 'all' || a.category === filter;
+  const filtered = activities.filter(activity => {
+    const matchSearch = activity.name.toLowerCase().includes(search.toLowerCase()) ||
+      activity.instructor.toLowerCase().includes(search.toLowerCase());
+    const matchFilter = filter === 'all' || activity.category === filter;
     return matchSearch && matchFilter;
   });
 
@@ -74,28 +74,28 @@ export const ActivitiesPage: React.FC = () => {
       createActivity(form);
       setFeedback('Actividad creada correctamente.');
     }
-    setVersion(v => v + 1);
+    setVersion(previousVersion => previousVersion + 1);
     resetForm();
   };
 
-  const handleEdit = (a: ActivityType) => {
+  const handleEdit = (activity: ActivityType) => {
     setForm({
-      name: a.name,
-      description: a.description,
-      category: a.category,
-      schedule: a.schedule,
-      maxStudents: a.maxStudents,
-      location: a.location,
-      instructor: a.instructor,
-      isActive: a.isActive,
+      name: activity.name,
+      description: activity.description,
+      category: activity.category,
+      schedule: activity.schedule,
+      maxStudents: activity.maxStudents,
+      location: activity.location,
+      instructor: activity.instructor,
+      isActive: activity.isActive,
     });
-    setEditingId(a.id);
+    setEditingId(activity.id);
     setShowForm(true);
   };
 
   const handleDelete = (id: string) => {
     deleteActivity(id);
-    setVersion(v => v + 1);
+    setVersion(previousVersion => previousVersion + 1);
     setDeleteConfirm(null);
     setFeedback('Actividad eliminada permanentemente.');
   };
@@ -163,8 +163,8 @@ export const ActivitiesPage: React.FC = () => {
                 className="h-9 rounded-lg border border-edu-border bg-slate-50 px-3 text-xs outline-none transition-all focus:border-edu-secondary focus:bg-white"
               >
                 <option value="all">Todas las categorías</option>
-                {Object.entries(categoryLabels).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
+                {Object.entries(categoryLabels).map(([category, categoryLabel]) => (
+                  <option key={category} value={category}>{categoryLabel}</option>
                 ))}
               </select>
             </div>
@@ -233,7 +233,7 @@ export const ActivitiesPage: React.FC = () => {
           </section>
 
           {showEnrolleesFor && (() => {
-            const activity = activities.find(a => a.id === showEnrolleesFor);
+            const activity = activities.find(activity => activity.id === showEnrolleesFor);
             if (!activity || activity.enrolledStudents.length === 0) return null;
             return (
               <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -287,38 +287,38 @@ export const ActivitiesPage: React.FC = () => {
               <div className="space-y-3">
                 <label className="block">
                   <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Nombre *</span>
-                  <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
+                  <input type="text" value={form.name} onChange={e => setForm(previousForm => ({ ...previousForm, name: e.target.value }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Descripción *</span>
-                  <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full rounded-lg border border-edu-border bg-white px-3 py-2 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
+                  <textarea value={form.description} onChange={e => setForm(previousForm => ({ ...previousForm, description: e.target.value }))} rows={3} className="w-full rounded-lg border border-edu-border bg-white px-3 py-2 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Categoría</span>
-                  <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value as ActivityCategory }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary">
-                    {Object.entries(categoryLabels).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
+                  <select value={form.category} onChange={e => setForm(previousForm => ({ ...previousForm, category: e.target.value as ActivityCategory }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary">
+                    {Object.entries(categoryLabels).map(([category, categoryLabel]) => (<option key={category} value={category}>{categoryLabel}</option>))}
                   </select>
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Horario *</span>
-                  <input type="text" value={form.schedule} onChange={e => setForm(f => ({ ...f, schedule: e.target.value }))} placeholder="Ej: Lunes y Miércoles 16:00-18:00" className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
+                  <input type="text" value={form.schedule} onChange={e => setForm(previousForm => ({ ...previousForm, schedule: e.target.value }))} placeholder="Ej: Lunes y Miércoles 16:00-18:00" className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
                     <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Instructor *</span>
-                    <input type="text" value={form.instructor} onChange={e => setForm(f => ({ ...f, instructor: e.target.value }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary" />
+                    <input type="text" value={form.instructor} onChange={e => setForm(previousForm => ({ ...previousForm, instructor: e.target.value }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary" />
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Cupo máx.</span>
-                    <input type="number" value={form.maxStudents} onChange={e => setForm(f => ({ ...f, maxStudents: Number(e.target.value) }))} min={1} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary" />
+                    <input type="number" value={form.maxStudents} onChange={e => setForm(previousForm => ({ ...previousForm, maxStudents: Number(e.target.value) }))} min={1} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary" />
                   </label>
                 </div>
                 <label className="block">
                   <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Ubicación</span>
-                  <input type="text" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary" />
+                  <input type="text" value={form.location} onChange={e => setForm(previousForm => ({ ...previousForm, location: e.target.value }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary" />
                 </label>
                 <label className="flex cursor-pointer items-center gap-2.5">
-                  <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} className="h-4 w-4 rounded border-edu-border text-edu-secondary focus:ring-edu-secondary/20" />
+                  <input type="checkbox" checked={form.isActive} onChange={e => setForm(previousForm => ({ ...previousForm, isActive: e.target.checked }))} className="h-4 w-4 rounded border-edu-border text-edu-secondary focus:ring-edu-secondary/20" />
                   <span className="text-xs font-semibold text-slate-700">Actividad activa</span>
                 </label>
                 <button type="button" onClick={handleSave} className="w-full h-9 cursor-pointer rounded-lg bg-edu-secondary text-xs font-semibold text-white shadow-sm shadow-edu-secondary/20 transition-all hover:bg-edu-secondary-dark">
