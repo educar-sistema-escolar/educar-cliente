@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { createPublicOpinion, listApprovedOpinions } from '../../features/opiniones/services/opinionStore';
 import type { OpinionRelation } from '../../features/opiniones/types';
+import { formatDate } from '../../shared/utils/formatters';
 
 const relationLabels: Record<OpinionRelation, string> = {
   familia: 'Familia',
@@ -16,14 +17,6 @@ const relationLabels: Record<OpinionRelation, string> = {
   egresado: 'Egresado',
   comunidad: 'Comunidad',
 };
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
 
 export const OpinionsPage: React.FC = () => {
   const [formData, setFormData] = useState({

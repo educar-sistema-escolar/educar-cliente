@@ -26,14 +26,7 @@ import {
   updateEnrollmentStatus,
 } from '../../features/inscripcion/services/enrollmentStore';
 import type { EnrollmentRequest, EnrollmentStatus } from '../../features/inscripcion/types';
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
+import { formatDate } from '../../shared/utils/formatters';
 
 const statusLabels: Record<EnrollmentStatus, string> = {
   pending: 'Nueva solicitud',

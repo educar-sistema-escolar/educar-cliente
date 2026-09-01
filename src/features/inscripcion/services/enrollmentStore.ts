@@ -5,6 +5,7 @@ import type {
   EnrollmentStatus,
 } from '../types';
 import { addDynamicInstitutionalStudent } from './dynamicInstitutionalStore';
+import { normalizeDni, normalizeEmail } from '../../../shared/utils/formatters';
 
 const ENROLLMENT_STORAGE_KEY = 'educar_enrollment_requests';
 const ACTIVE_STATUSES: EnrollmentStatus[] = [
@@ -32,14 +33,6 @@ function readRequests() {
 function writeRequests(requests: EnrollmentRequest[]) {
   localStorage.setItem(ENROLLMENT_STORAGE_KEY, JSON.stringify(requests));
   window.dispatchEvent(new Event('enrollment-updated'));
-}
-
-function normalizeDni(dni: string) {
-  return dni.replace(/\D/g, '');
-}
-
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
 }
 
 function normalizeText(value: string) {

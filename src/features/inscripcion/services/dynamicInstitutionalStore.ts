@@ -13,12 +13,9 @@
  */
 
 import type { InstitutionalStudent } from '../../auth/types';
+import { normalizeDni } from '../../../shared/utils/formatters';
 
 const DYNAMIC_STUDENTS_KEY = 'educar_dynamic_institutional_students';
-
-function normalizeDni(dni: string): string {
-  return dni.replace(/\D/g, '');
-}
 
 function readDynamicStudents(): InstitutionalStudent[] {
   const raw = localStorage.getItem(DYNAMIC_STUDENTS_KEY);

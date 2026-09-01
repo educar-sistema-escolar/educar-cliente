@@ -16,6 +16,7 @@ import {
   deletePublicOpinion,
 } from '../../features/opiniones/services/opinionStore';
 import type { PublicOpinionStatus } from '../../features/opiniones/types';
+import { formatDate } from '../../shared/utils/formatters';
 
 const statusLabels: Record<PublicOpinionStatus, string> = {
   pending: 'Pendiente',
@@ -35,14 +36,6 @@ const filters: Array<{ value: PublicOpinionStatus | 'all'; label: string }> = [
   { value: 'approved', label: 'Aprobadas' },
   { value: 'rejected', label: 'Rechazadas' },
 ];
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
 
 export const OpinionModerationPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<PublicOpinionStatus | 'all'>('pending');

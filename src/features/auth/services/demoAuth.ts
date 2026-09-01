@@ -3,6 +3,7 @@ import { getDynamicInstitutionalStudentByDni } from '../../inscripcion/services/
 import { institutionalStudents } from '../data/institutionalStudents';
 import { localDemoAccounts } from '../data/localDemoAccounts';
 import { saveLocalCredential, verifyLocalCredential } from './localCredentialsStore';
+import { normalizeDni, normalizeEmail } from '../../../shared/utils/formatters';
 import type {
   AuthSession,
   DemoUserRole,
@@ -23,14 +24,6 @@ type AccountStatusMap = Record<string, boolean>;
 
 function getEndpoint(path: string) {
   return `${API_BASE_URL}${path}`;
-}
-
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
-}
-
-function normalizeDni(dni: string) {
-  return dni.replace(/\D/g, '');
 }
 
 function formatNameFromEmail(email: string) {

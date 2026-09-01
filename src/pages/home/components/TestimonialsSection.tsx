@@ -2,14 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, MessageSquare, User } from 'lucide-react';
 import { listApprovedOpinions } from '../../../features/opiniones/services/opinionStore';
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
+import { formatDate } from '../../../shared/utils/formatters';
 
 const relationLabels = {
   familia: 'Familia',
