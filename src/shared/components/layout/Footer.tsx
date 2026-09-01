@@ -205,8 +205,7 @@ export const Footer: React.FC = () => {
               {localDemoAccounts.map((credential) => (
                 <Link
                   key={credential.role}
-                  to="/login"
-                  state={{ demoCredentials: { email: credential.email, password: credential.password } }}
+                  to={`/login?demo=${credential.role}`}
                   aria-label={`Iniciar sesión como ${demoRolePresentation[credential.role].label}`}
                   className="group rounded-xl border border-white/[0.02] bg-slate-900/40 p-2.5 text-[11px] transition hover:border-white/10 hover:bg-slate-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-edu-accent"
                 >

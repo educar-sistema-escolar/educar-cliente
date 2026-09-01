@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
   CheckCircle2,
@@ -18,13 +18,11 @@ import {
   getSession,
   loginWithEmail,
 } from '../../features/auth/services/demoAuth';
+import { localDemoAccounts } from '../../features/auth/data/localDemoAccounts';
 
-export const LoginPage: React.FC = () => {
+const LoginForm: React.FC<{ demoRole: string | null }> = ({ demoRole }) => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const demoCredentials = (location.state as {
-    demoCredentials?: { email?: string; password?: string };
-  } | null)?.demoCredentials;
+  const demoCredentials = localDemoAccounts.find((account) => account.role === demoRole);
   const [email, setEmail] = useState(() => demoCredentials?.email ?? '');
   const [password, setPassword] = useState(() => demoCredentials?.password ?? '');
   const [showPassword, setShowPassword] = useState(false);
@@ -357,6 +355,13 @@ export const LoginPage: React.FC = () => {
       </div>
     </div>
   );
+};
+
+export const LoginPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const demoRole = searchParams.get('demo');
+
+  return <LoginForm key={demoRole ?? 'manual'} demoRole={demoRole} />;
 };
 
 
