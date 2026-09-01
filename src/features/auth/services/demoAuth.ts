@@ -327,7 +327,10 @@ export async function loginWithEmail(email: string, password: string) {
   const localAccount = findLocalDemoAccount(normalizedEmail);
   const registeredUser = findRegisteredUserByEmail(normalizedEmail);
 
-  if (localAccount && !registeredUser) {
+  // Las cuentas publicadas en el footer son siempre válidas en esta demo.
+  // Se resuelven antes que los registros de localStorage para que datos viejos
+  // del navegador no puedan bloquear el acceso mock.
+  if (localAccount) {
     if (localAccount.password !== password) {
       throw new Error('Credenciales invalidas.');
     }

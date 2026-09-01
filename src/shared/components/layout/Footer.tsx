@@ -7,7 +7,10 @@ import {
   Clock,
   ShieldCheck,
   KeyRound,
+  LogIn,
 } from 'lucide-react';
+import { localDemoAccounts } from '../../../features/auth/data/localDemoAccounts';
+import type { DemoUserRole } from '../../../features/auth/types';
 
 const navLinks = [
   { label: 'Inicio', path: '/' },
@@ -74,26 +77,12 @@ const socialLinks = [
   },
 ];
 
-const demoCredentials = [
-  {
-    role: 'Autoridad',
-    email: 'director@educar.com',
-    password: 'programacion2026',
-    className: 'text-edu-secondary-light',
-  },
-  {
-    role: 'Docente',
-    email: 'docente@educar.com',
-    password: 'programacion2026',
-    className: 'text-emerald-400',
-  },
-  {
-    role: 'Familia',
-    email: 'familia@educar.com',
-    password: 'programacion2026',
-    className: 'text-amber-400',
-  },
-];
+const demoRolePresentation: Record<DemoUserRole, { label: string; className: string }> = {
+  authority: { label: 'Autoridad', className: 'text-edu-secondary-light' },
+  teacher: { label: 'Docente', className: 'text-emerald-400' },
+  parent: { label: 'Familia', className: 'text-amber-400' },
+  student: { label: 'Estudiante', className: 'text-sky-400' },
+};
 
 export const Footer: React.FC = () => {
   return (
@@ -213,14 +202,24 @@ export const Footer: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
-              {demoCredentials.map((credential) => (
-                <div key={credential.role} className="text-[11px] bg-slate-900/40 border border-white/[0.02] p-2.5 rounded-xl">
-                  <p className={`font-bold text-[9px] uppercase tracking-wider ${credential.className}`}>
-                    {credential.role}
+              {localDemoAccounts.map((credential) => (
+                <Link
+                  key={credential.role}
+                  to="/login"
+                  state={{ demoCredentials: { email: credential.email, password: credential.password } }}
+                  aria-label={`Iniciar sesión como ${demoRolePresentation[credential.role].label}`}
+                  className="group rounded-xl border border-white/[0.02] bg-slate-900/40 p-2.5 text-[11px] transition hover:border-white/10 hover:bg-slate-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-edu-accent"
+                >
+                  <p className={`font-bold text-[9px] uppercase tracking-wider ${demoRolePresentation[credential.role].className}`}>
+                    {demoRolePresentation[credential.role].label}
                   </p>
                   <p className="text-slate-300 font-mono mt-0.5 select-all">{credential.email}</p>
                   <p className="text-slate-500 font-mono text-[9px]">pass: {credential.password}</p>
-                </div>
+                  <span className="mt-2 flex items-center gap-1 text-[9px] font-semibold text-slate-400 transition group-hover:text-white">
+                    <LogIn size={11} />
+                    Usar credenciales
+                  </span>
+                </Link>
               ))}
             </div>
           </div>

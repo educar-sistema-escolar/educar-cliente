@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   CheckCircle2,
@@ -21,8 +21,12 @@ import {
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const location = useLocation();
+  const demoCredentials = (location.state as {
+    demoCredentials?: { email?: string; password?: string };
+  } | null)?.demoCredentials;
+  const [email, setEmail] = useState(() => demoCredentials?.email ?? '');
+  const [password, setPassword] = useState(() => demoCredentials?.password ?? '');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
