@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local and sensitive project files
+.env
+.env.*
+!.env.example
+tmp/
+github-recovery-codes.txt
