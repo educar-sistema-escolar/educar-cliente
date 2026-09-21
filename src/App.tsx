@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { MainLayout } from './shared/components/layout/MainLayout';
 import { HomePage } from './pages/home/HomePage';
 import { AboutPage } from './pages/about/AboutPage';
@@ -31,6 +31,11 @@ import { FamilyLayout } from './pages/family/FamilyLayout';
 import { FamilyDashboardPage } from './pages/family/FamilyDashboardPage';
 import { getRoleHomePath, getSession } from './features/auth/services/demoAuth';
 import type { DemoUserRole } from './features/auth/types';
+import {
+  getSupabaseAdminSession,
+  subscribeToSupabaseAuth,
+} from './features/auth/services/supabaseAuth';
+import { AcademicMasterDataPage } from './pages/admin/AcademicMasterDataPage';
 
 const PublicLayout = () => (
   <MainLayout>
@@ -58,6 +63,36 @@ const RoleProtectedRoute = ({
   return <>{children}</>;
 };
 
+const SupabaseAdminRoute = ({ children }: { children: ReactNode }) => {
+  const [sessionState, setSessionState] = useState<{
+    loading: boolean;
+    isAuthenticated: boolean;
+  }>({ loading: true, isAuthenticated: false });
+
+  useEffect(() => {
+    let mounted = true;
+    const refresh = async () => {
+      const session = await getSupabaseAdminSession();
+      if (mounted) {
+        setSessionState({ loading: false, isAuthenticated: Boolean(session) });
+      }
+    };
+
+    void refresh();
+    const unsubscribe = subscribeToSupabaseAuth(() => void refresh());
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  if (sessionState.loading) {
+    return <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">Validando sesión...</div>;
+  }
+
+  return sessionState.isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
 function App() {
   return (
     <Router>
@@ -80,9 +115,9 @@ function App() {
         <Route
           path="/privado"
           element={
-            <RoleProtectedRoute allowedRoles={['authority']}>
+            <SupabaseAdminRoute>
               <AdminLayout />
-            </RoleProtectedRoute>
+            </SupabaseAdminRoute>
           }
         >
           <Route index element={<Navigate to="solicitudes" replace />} />
@@ -94,6 +129,11 @@ function App() {
           <Route path="cuentas" element={<CuentasDelSistemaPage />} />
           <Route path="actividades" element={<ActivitiesPage />} />
           <Route path="comentarios" element={<CommentsModerationPage />} />
+          <Route path="niveles" element={<AcademicMasterDataPage key="levels" resource="levels" />} />
+          <Route path="cursos" element={<AcademicMasterDataPage key="courses" resource="courses" />} />
+          <Route path="materias" element={<AcademicMasterDataPage key="subjects" resource="subjects" />} />
+          <Route path="docentes" element={<AcademicMasterDataPage key="teachers" resource="teachers" />} />
+          <Route path="alumnos" element={<AcademicMasterDataPage key="students" resource="students" />} />
         </Route>
 
         <Route

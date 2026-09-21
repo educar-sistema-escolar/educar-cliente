@@ -3,6 +3,7 @@ import { getDynamicInstitutionalStudentByDni } from '../../inscripcion/services/
 import { institutionalStudents } from '../data/institutionalStudents';
 import { localDemoAccounts } from '../data/localDemoAccounts';
 import { saveLocalCredential, verifyLocalCredential } from './localCredentialsStore';
+import { loginAuthority } from './supabaseAuth';
 import type {
   AuthSession,
   DemoUserRole,
@@ -326,6 +327,10 @@ export async function loginWithEmail(email: string, password: string) {
   const normalizedEmail = normalizeEmail(email);
   const localAccount = findLocalDemoAccount(normalizedEmail);
   const registeredUser = findRegisteredUserByEmail(normalizedEmail);
+
+  if (normalizedEmail === ADMIN_EMAIL || localAccount?.role === 'authority') {
+    return loginAuthority(normalizedEmail, password);
+  }
 
   // Las cuentas publicadas en el footer son siempre válidas en esta demo.
   // Se resuelven antes que los registros de localStorage para que datos viejos

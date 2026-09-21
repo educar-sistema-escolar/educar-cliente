@@ -1,6 +1,6 @@
 export type DemoUserRole = 'authority' | 'student' | 'parent' | 'teacher';
 
-export type AuthSource = 'backend' | 'local';
+export type AuthSource = 'backend' | 'local' | 'supabase';
 
 export interface AuthSession {
   token: string;

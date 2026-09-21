@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
-  AlertTriangle,
   ArrowLeft,
   Bell,
   ClipboardList,
@@ -13,16 +12,15 @@ import {
   MessageSquare,
   Newspaper,
   PlusSquare,
-  ShieldCheck,
+  BookOpen,
+  GraduationCap,
+  School,
+  UserRound,
   Users,
   X,
 } from 'lucide-react';
-import {
-  changeUserPassword,
-  clearSession,
-  getRoleHomePath,
-  getSession,
-} from '../../features/auth/services/demoAuth';
+import { getSupabaseAdminSession, signOutSupabase } from '../../features/auth/services/supabaseAuth';
+import type { AuthSession } from '../../features/auth/types';
 import { getEnrollmentStatusCount } from '../../features/inscripcion/services/enrollmentStore';
 
 const NAV_ITEMS = [
@@ -33,6 +31,11 @@ const NAV_ITEMS = [
   { label: 'Crear Noticia', icon: PlusSquare, path: '/privado/crear-noticia' },
   { label: 'Actividades', icon: Activity, path: '/privado/actividades' },
   { label: 'Cuentas del Sistema', icon: Users, path: '/privado/cuentas' },
+  { label: 'Niveles', icon: School, path: '/privado/niveles' },
+  { label: 'Cursos', icon: GraduationCap, path: '/privado/cursos' },
+  { label: 'Materias', icon: BookOpen, path: '/privado/materias' },
+  { label: 'Docentes', icon: UserRound, path: '/privado/docentes' },
+  { label: 'Alumnos', icon: Users, path: '/privado/alumnos' },
 ];
 
 function getInitials(name: string): string {
@@ -48,23 +51,12 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const session = getSession();
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [pendingRequests, setPendingRequests] = useState(() => getEnrollmentStatusCount('pending'));
-  const [showChangePassword, setShowChangePassword] = useState(session?.mustChangePassword ?? false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
-    if (!session) {
-      navigate('/login');
-      return;
-    }
-    if (session.role !== 'authority') {
-      navigate(getRoleHomePath(session.role));
-    }
-  }, [navigate, session]);
+    void getSupabaseAdminSession().then(setSession);
+  }, []);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -75,34 +67,8 @@ export const AdminLayout: React.FC = () => {
   }, []);
 
   const handleLogout = () => {
-    clearSession();
+    void signOutSupabase();
     navigate('/login');
-  };
-
-  const handleChangePassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    setChangePasswordError(null);
-
-    if (newPassword.length < 6) {
-      setChangePasswordError('La contraseña debe tener al menos 6 caracteres.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setChangePasswordError('Las contraseñas no coinciden.');
-      return;
-    }
-
-    setIsChangingPassword(true);
-    try {
-      changeUserPassword(session!.email, newPassword);
-      setShowChangePassword(false);
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (err) {
-      setChangePasswordError(err instanceof Error ? err.message : 'Error al cambiar la contraseña.');
-    } finally {
-      setIsChangingPassword(false);
-    }
   };
 
   const isActive = (path: string) => {
@@ -322,78 +288,6 @@ export const AdminLayout: React.FC = () => {
         </main>
       </div>
 
-      {showChangePassword && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="border-b border-slate-200 px-5 py-4">
-              <h2 className="text-sm font-bold text-edu-primary">Cambiar contraseña</h2>
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                Es necesario que cambies tu contraseña antes de continuar.
-              </p>
-            </div>
-            <form onSubmit={handleChangePassword} className="space-y-4 p-5">
-              {changePasswordError && (
-                <div className="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-xs font-medium text-red-700">
-                  <AlertTriangle size={14} />
-                  {changePasswordError}
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Nueva contraseña</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-edu-secondary focus:ring-3 focus:ring-edu-secondary/10"
-                  required
-                  minLength={6}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Confirmar contraseña</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repite la contraseña"
-                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-edu-secondary focus:ring-3 focus:ring-edu-secondary/10"
-                  required
-                />
-              </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="cursor-pointer rounded-xl border border-slate-300 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 transition-all hover:bg-slate-50"
-                >
-                  Cerrar sesión
-                </button>
-                <button
-                  type="submit"
-                  disabled={isChangingPassword}
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-edu-secondary to-edu-secondary-light px-5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm shadow-edu-secondary/20 transition-all hover:opacity-90 active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {isChangingPassword ? (
-                    <>
-                      <svg className="h-3.5 w-3.5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck size={14} />
-                      Cambiar contraseña
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
