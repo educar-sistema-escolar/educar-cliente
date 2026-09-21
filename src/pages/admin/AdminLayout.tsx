@@ -52,18 +52,28 @@ export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [session, setSession] = useState<AuthSession | null>(null);
-  const [pendingRequests, setPendingRequests] = useState(() => getEnrollmentStatusCount('pending'));
+  const [pendingRequests, setPendingRequests] = useState(0);
 
   useEffect(() => {
     void getSupabaseAdminSession().then(setSession);
   }, []);
 
   useEffect(() => {
-    const handleUpdate = () => {
-      setPendingRequests(getEnrollmentStatusCount('pending'));
+    let mounted = true;
+    const refreshPendingRequests = () => {
+      void getEnrollmentStatusCount('pending')
+      .then((count) => {
+        if (mounted) setPendingRequests(count);
+      })
+      .catch(() => undefined);
     };
-    window.addEventListener('enrollment-updated', handleUpdate);
-    return () => window.removeEventListener('enrollment-updated', handleUpdate);
+
+    refreshPendingRequests();
+    window.addEventListener('enrollment-updated', refreshPendingRequests);
+    return () => {
+      mounted = false;
+      window.removeEventListener('enrollment-updated', refreshPendingRequests);
+    };
   }, []);
 
   const handleLogout = () => {

@@ -1,37 +1,66 @@
-import { institutionalStudents } from '../../auth/data/institutionalStudents';
+import { requireSupabase } from '../../auth/services/supabaseClient';
 import type {
   EnrollmentRequest,
   EnrollmentRequestInput,
   EnrollmentStatus,
 } from '../types';
-import { addDynamicInstitutionalStudent } from './dynamicInstitutionalStore';
 
-const ENROLLMENT_STORAGE_KEY = 'educar_enrollment_requests';
-const ACTIVE_STATUSES: EnrollmentStatus[] = [
-  'pending',
-  'reviewed',
-  'approved_for_registration',
-  'pending_admin_creation',
-  'account_created',
-];
+type EnrollmentRequestRow = {
+  id: string;
+  student_first_name: string;
+  student_last_name: string;
+  student_dni: string;
+  birth_date: string;
+  educational_level: string;
+  school_year: string;
+  turn: string;
+  academic_year: number;
+  responsible_full_name: string;
+  responsible_dni: string;
+  responsible_relation: string;
+  phone: string;
+  email: string;
+  notes: string;
+  status: EnrollmentStatus;
+  source: 'public-form';
+  approved_course_id: string | null;
+  student_id: string | null;
+  enrollment_id: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
-function readRequests() {
-  const raw = localStorage.getItem(ENROLLMENT_STORAGE_KEY);
-
-  if (!raw) {
-    return [] as EnrollmentRequest[];
-  }
-
-  try {
-    return JSON.parse(raw) as EnrollmentRequest[];
-  } catch {
-    return [] as EnrollmentRequest[];
-  }
+function repositoryError(message: string): Error {
+  return new Error(`No se pudo completar la operación de inscripción: ${message}`);
 }
 
-function writeRequests(requests: EnrollmentRequest[]) {
-  localStorage.setItem(ENROLLMENT_STORAGE_KEY, JSON.stringify(requests));
-  window.dispatchEvent(new Event('enrollment-updated'));
+function mapRequest(row: EnrollmentRequestRow): EnrollmentRequest {
+  return {
+    id: row.id,
+    studentFirstName: row.student_first_name,
+    studentLastName: row.student_last_name,
+    studentDni: row.student_dni,
+    birthDate: row.birth_date,
+    educationalLevel: row.educational_level,
+    schoolYear: row.school_year,
+    turn: row.turn,
+    academicYear: row.academic_year,
+    responsibleFullName: row.responsible_full_name,
+    responsibleDni: row.responsible_dni,
+    responsibleRelation: row.responsible_relation,
+    phone: row.phone,
+    email: row.email,
+    notes: row.notes,
+    status: row.status,
+    source: row.source,
+    approvedCourseId: row.approved_course_id,
+    studentId: row.student_id,
+    enrollmentId: row.enrollment_id,
+    rejectionReason: row.rejection_reason,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 function normalizeDni(dni: string) {
@@ -48,6 +77,10 @@ function normalizeText(value: string) {
 
 function hasNumber(value: string) {
   return /\d/.test(value);
+}
+
+function notifyEnrollmentUpdated() {
+  window.dispatchEvent(new Event('enrollment-updated'));
 }
 
 export function normalizeEnrollmentInput(
@@ -127,121 +160,83 @@ export function validateEnrollmentInput(input: EnrollmentRequestInput) {
   return normalized;
 }
 
-export function listEnrollmentRequests() {
-  return readRequests().sort((left, right) =>
-    right.createdAt.localeCompare(left.createdAt),
-  );
+export async function listEnrollmentRequests(
+  status?: EnrollmentStatus,
+): Promise<EnrollmentRequest[]> {
+  const { data, error } = await requireSupabase().rpc('list_enrollment_requests', {
+    p_status: status ?? null,
+  });
+
+  if (error) throw repositoryError(error.message);
+  return ((data ?? []) as EnrollmentRequestRow[]).map(mapRequest);
 }
 
-export function createEnrollmentRequest(input: EnrollmentRequestInput) {
+export async function getEnrollmentStatusCount(status: EnrollmentStatus) {
+  return (await listEnrollmentRequests(status)).length;
+}
+
+export async function createEnrollmentRequest(input: EnrollmentRequestInput) {
   const normalized = validateEnrollmentInput(input);
-  const requests = readRequests();
-  const duplicatedActive = requests.find(
-    (item) =>
-      normalizeDni(item.studentDni) === normalized.studentDni &&
-      ACTIVE_STATUSES.includes(item.status),
-  );
+  const { data, error } = await requireSupabase().rpc('submit_enrollment_request', {
+    p_payload: {
+      studentFirstName: normalized.studentFirstName,
+      studentLastName: normalized.studentLastName,
+      studentDni: normalized.studentDni,
+      birthDate: normalized.birthDate,
+      educationalLevel: normalized.educationalLevel,
+      schoolYear: normalized.schoolYear,
+      turn: normalized.turn,
+      academicYear: new Date().getFullYear(),
+      responsibleFullName: normalized.responsibleFullName,
+      responsibleDni: normalized.responsibleDni,
+      responsibleRelation: normalized.responsibleRelation,
+      phone: normalized.phone,
+      email: normalized.email,
+      notes: normalized.notes,
+    },
+  });
 
-  if (duplicatedActive) {
-    throw new Error(
-      'Ya existe una solicitud activa para este DNI. Revisá tu correo electrónico o esperá el contacto de la institución.',
-    );
-  }
-
-  const request: EnrollmentRequest = {
-    ...normalized,
-    id: crypto.randomUUID(),
-    createdAt: new Date().toISOString(),
-    status: 'pending',
-    source: 'public-form',
-  };
-
-  writeRequests([request, ...requests]);
+  if (error) throw repositoryError(error.message);
+  if (!data) throw repositoryError('el servidor no devolvió la solicitud creada');
+  const request = mapRequest(data as EnrollmentRequestRow);
+  notifyEnrollmentUpdated();
   return request;
 }
 
-export function updateEnrollmentStatus(id: string, status: EnrollmentStatus) {
-  const updated = readRequests().map((item) =>
-    item.id === id ? { ...item, status } : item,
-  );
+export async function approveEnrollmentRequest(requestId: string, courseId: string) {
+  const { data, error } = await requireSupabase().rpc('approve_enrollment_request', {
+    p_request_id: requestId,
+    p_course_id: courseId,
+  });
 
-  writeRequests(updated);
-  return updated.find((item) => item.id === id) ?? null;
+  if (error) throw repositoryError(error.message);
+  notifyEnrollmentUpdated();
+  return data as { id: string; status: EnrollmentStatus };
 }
 
-export function approveEnrollmentRequest(id: string) {
-  const current = readRequests();
-  const target = current.find((item) => item.id === id);
+export async function rejectEnrollmentRequest(requestId: string, reason?: string) {
+  const { data, error } = await requireSupabase().rpc('reject_enrollment_request', {
+    p_request_id: requestId,
+    p_reason: reason ?? null,
+  });
 
-  if (!target) {
-    return null;
-  }
-
-  // INTENTIONAL: When the admin approves an enrollment, the student is
-  // automatically added to the dynamic institutional registry. This simulates
-  // the "alta" step that in production would be handled by a backend service
-  // (e.g., POST /students). The hardcoded data remains untouched.
-  const alreadyInStaticBase = institutionalStudents.some(
-    (student) => student.dni === normalizeDni(target.studentDni),
-  );
-
-  if (!alreadyInStaticBase) {
-    addDynamicInstitutionalStudent({
-      dni: normalizeDni(target.studentDni),
-      firstName: target.studentFirstName,
-      lastName: target.studentLastName,
-      email: target.email,
-      birthDate: target.birthDate,
-      schoolYear: target.schoolYear,
-      division: '',
-      educationalLevel: target.educationalLevel,
-    });
-  }
-
-  // After the dynamic addition the student always exists in some form of
-  // institutional registry, so we go directly to 'approved_for_registration'.
-  return updateEnrollmentStatus(id, 'approved_for_registration');
+  if (error) throw repositoryError(error.message);
+  notifyEnrollmentUpdated();
+  return data as { id: string; status: EnrollmentStatus };
 }
 
-export function getEnrollmentStatusCount(status: EnrollmentStatus) {
-  return readRequests().filter((item) => item.status === status).length;
+export async function archiveEnrollmentRequest(requestId: string) {
+  const { data, error } = await requireSupabase().rpc('archive_enrollment_request', {
+    p_request_id: requestId,
+  });
+
+  if (error) throw repositoryError(error.message);
+  notifyEnrollmentUpdated();
+  return data as { id: string; status: EnrollmentStatus };
 }
 
-export function markEnrollmentAccountCreatedByDni(dni: string) {
-  const normalizedDni = normalizeDni(dni);
-  const requests = readRequests();
-  const target = requests.find(
-    (item) =>
-      normalizeDni(item.studentDni) === normalizedDni &&
-      item.status !== 'archived',
-  );
-
-  if (!target) {
-    return null;
-  }
-
-  return updateEnrollmentStatus(target.id, 'account_created');
-}
-
-export function updateEnrollmentRequest(id: string, input: Partial<EnrollmentRequestInput>) {
-  const requests = readRequests();
-  const index = requests.findIndex(item => item.id === id);
-
-  if (index === -1) {
-    return null;
-  }
-
-  requests[index] = { ...requests[index], ...input };
-  writeRequests(requests);
-  return requests[index];
-}
-
-export function deleteEnrollmentRequest(id: string) {
-  const requests = readRequests().filter(item => item.id !== id);
-  writeRequests(requests);
-  return requests;
-}
-
-export function getEnrollmentRequestById(id: string) {
-  return readRequests().find(item => item.id === id) ?? null;
+// The old demo registration screen has no Stage 2 server status to update.
+export function markEnrollmentAccountCreatedByDni(_dni: string) {
+  void _dni;
+  return null;
 }

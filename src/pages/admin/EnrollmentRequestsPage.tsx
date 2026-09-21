@@ -1,31 +1,51 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ArrowRight,
+  AlertTriangle,
   Calendar,
   CheckCircle2,
   ClipboardList,
   FolderArchive,
   GraduationCap,
   Mail,
-  Pencil,
   Phone,
+  RefreshCw,
   SearchCheck,
   ShieldCheck,
-  Trash2,
   User,
   X,
-  Sparkles,
+  XCircle,
 } from 'lucide-react';
+import { listCourses } from '../../features/admin/services/academicRepository';
+import type { Course } from '../../features/admin/types';
 import {
   approveEnrollmentRequest,
-  deleteEnrollmentRequest,
-  getEnrollmentStatusCount,
+  archiveEnrollmentRequest,
   listEnrollmentRequests,
-  updateEnrollmentRequest,
-  updateEnrollmentStatus,
+  rejectEnrollmentRequest,
 } from '../../features/inscripcion/services/enrollmentStore';
 import type { EnrollmentRequest, EnrollmentStatus } from '../../features/inscripcion/types';
+
+const statusLabels: Record<EnrollmentStatus, string> = {
+  pending: 'Nueva solicitud',
+  approved: 'Aprobada',
+  rejected: 'Rechazada',
+  archived: 'Archivada',
+};
+
+const statusClasses: Record<EnrollmentStatus, string> = {
+  pending: 'bg-amber-50 text-amber-700 border border-amber-200/50',
+  approved: 'bg-emerald-50 text-emerald-700 border border-emerald-200/50',
+  rejected: 'bg-red-50 text-red-700 border border-red-200/50',
+  archived: 'bg-slate-100 text-slate-600 border border-slate-200/50',
+};
+
+const filters: Array<{ value: EnrollmentStatus | 'all'; label: string }> = [
+  { value: 'all', label: 'Todas' },
+  { value: 'pending', label: 'Pendientes' },
+  { value: 'approved', label: 'Aprobadas' },
+  { value: 'rejected', label: 'Rechazadas' },
+  { value: 'archived', label: 'Archivadas' },
+];
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString('es-AR', {
@@ -35,195 +55,126 @@ function formatDate(value: string) {
   });
 }
 
-const statusLabels: Record<EnrollmentStatus, string> = {
-  pending: 'Nueva solicitud',
-  reviewed: 'En analisis',
-  approved_for_registration: 'Lista para crear cuenta',
-  pending_admin_creation: 'Pendiente de carga interna',
-  account_created: 'Cuenta creada',
-  archived: 'Cerrada',
-};
-
-const statusClasses: Record<EnrollmentStatus, string> = {
-  pending: 'bg-amber-50 text-amber-700 border border-amber-200/50',
-  reviewed: 'bg-sky-50 text-sky-700 border border-sky-200/50',
-  approved_for_registration: 'bg-emerald-50 text-emerald-700 border border-emerald-200/50',
-  pending_admin_creation: 'bg-violet-50 text-violet-700 border border-violet-200/50',
-  account_created: 'bg-edu-secondary/10 text-edu-primary border border-edu-secondary/30',
-  archived: 'bg-slate-100 text-slate-600 border border-slate-200/50',
-};
-
-const filters: Array<{ value: EnrollmentStatus | 'all'; label: string }> = [
-  { value: 'all', label: 'Todas' },
-  { value: 'pending', label: 'Nuevas' },
-  { value: 'approved_for_registration', label: 'Crear cuenta' },
-  { value: 'account_created', label: 'Cuenta lista' },
-  { value: 'pending_admin_creation', label: 'Carga interna' },
-  { value: 'archived', label: 'Cerradas' },
-];
-
-type StepView = {
-  eyebrow: string;
-  headline: string;
-  body: string;
-  ctaLabel?: string;
-  ctaPath?: string;
-  accent: string;
-};
-
-function getStepView(request: EnrollmentRequest): StepView {
-  switch (request.status) {
-    case 'approved_for_registration':
-      return {
-        eyebrow: 'Habilitado',
-        headline: 'Listo para auto-registro',
-        body: 'El alta institucional está completa. El alumno ya está habilitado para crear su cuenta ingresando su DNI en el portal de registro.',
-        ctaLabel: 'Ir a registro',
-        ctaPath: `/registro?role=student&dni=${request.studentDni}`,
-        accent: 'border-emerald-100 bg-gradient-to-r from-emerald-50/80 to-white',
-      };
-    case 'pending_admin_creation':
-      return {
-        eyebrow: 'Carga Pendiente',
-        headline: 'Requiere registro previo en el sistema interno',
-        body: 'Antes de permitir el registro del usuario, un administrador debe cargar formalmente los datos de este alumno en la base institucional.',
-        accent: 'border-violet-100 bg-gradient-to-r from-violet-50/80 to-white',
-      };
-    case 'reviewed':
-      return {
-        eyebrow: 'En Revisión',
-        headline: 'En proceso de evaluación',
-        body: 'La solicitud está siendo evaluada para determinar si corresponde su aprobación directa o si requiere una revisión de datos internos.',
-        accent: 'border-sky-100 bg-gradient-to-r from-sky-50/80 to-white',
-      };
-    case 'account_created':
-      return {
-        eyebrow: 'Cuenta Lista',
-        headline: 'Acceso habilitado en el sistema',
-        body: 'La cuenta se encuentra creada y activa. El estudiante ya puede ingresar al portal privado utilizando sus credenciales.',
-        ctaLabel: 'Ir al Login',
-        ctaPath: '/login',
-        accent: 'border-edu-secondary/20 bg-gradient-to-r from-edu-secondary/10 to-white',
-      };
-    case 'archived':
-      return {
-        eyebrow: 'Cerrado',
-        headline: 'Caso finalizado y archivado',
-        body: 'Esta solicitud ha sido archivada. No requiere gestiones adicionales en el flujo actual de admisiones.',
-        accent: 'border-slate-200 bg-gradient-to-r from-slate-50/50 to-white',
-      };
-    case 'pending':
-    default:
-      return {
-        eyebrow: 'Acción Pendiente',
-        headline: 'Evaluar y procesar solicitud',
-        body: 'Revise los antecedentes del aspirante para decidir si se aprueba su alta directa o si requiere una verificación previa.',
-        accent: 'border-amber-100 bg-gradient-to-r from-amber-50/80 to-white',
-      };
-  }
+function courseLabel(course: Course) {
+  return `${course.level?.name ?? 'Nivel'} · ${course.name} · ${course.academic_year}`;
 }
 
 export const EnrollmentRequestsPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<EnrollmentStatus | 'all'>('all');
+  const [requests, setRequests] = useState<EnrollmentRequest[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [successModalData, setSuccessModalData] = useState<{
-    studentName: string;
-    studentDni: string;
-    email: string;
-    level: string;
-  } | null>(null);
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [approvalRequest, setApprovalRequest] = useState<EnrollmentRequest | null>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState('');
   const [confirmAction, setConfirmAction] = useState<{
-    type: 'resolve' | 'archive' | 'delete';
+    type: 'reject' | 'archive';
     request: EnrollmentRequest;
   } | null>(null);
-  const [editingRequest, setEditingRequest] = useState<EnrollmentRequest | null>(null);
-  const [editForm, setEditForm] = useState({
-    studentFirstName: '',
-    studentLastName: '',
-    studentDni: '',
-    birthDate: '',
-    email: '',
-    phone: '',
-    notes: '',
-  });
 
-  const [requests, setRequests] = useState(() => listEnrollmentRequests());
+  const fetchData = useCallback(() => Promise.all([
+    listEnrollmentRequests(),
+    listCourses(),
+  ]), []);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [nextRequests, nextCourses] = await fetchData();
+      setRequests(nextRequests);
+      setCourses(nextCourses);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar las solicitudes.');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchData]);
 
   useEffect(() => {
-    const handleUpdate = () => {
-      setRequests(listEnrollmentRequests());
-    };
-
-    window.addEventListener('enrollment-updated', handleUpdate);
-    return () => {
-      window.removeEventListener('enrollment-updated', handleUpdate);
-    };
-  }, []);
-
-  const visibleRequests =
-    activeFilter === 'all'
-      ? requests
-      : requests.filter((item) => item.status === activeFilter);
-
-  const resolveRequest = (request: EnrollmentRequest) => {
-    const updated = approveEnrollmentRequest(request.id);
-
-    if (!updated) {
-      setFeedback('No se pudo actualizar la solicitud seleccionada.');
-      return;
-    }
-
-    if (updated.status === 'approved_for_registration') {
-      setActiveFilter('approved_for_registration');
-      setSuccessModalData({
-        studentName: `${request.studentFirstName} ${request.studentLastName}`,
-        studentDni: request.studentDni,
-        email: request.email,
-        level: `${request.educationalLevel} · ${request.schoolYear}`,
+    let mounted = true;
+    void fetchData()
+      .then(([nextRequests, nextCourses]) => {
+        if (!mounted) return;
+        setRequests(nextRequests);
+        setCourses(nextCourses);
+      })
+      .catch((loadError) => {
+        if (mounted) setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar las solicitudes.');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
       });
-      return;
+    return () => {
+      mounted = false;
+    };
+  }, [fetchData]);
+
+  const visibleRequests = useMemo(
+    () => activeFilter === 'all'
+      ? requests
+      : requests.filter((request) => request.status === activeFilter),
+    [activeFilter, requests],
+  );
+
+  const pendingCount = requests.filter((request) => request.status === 'pending').length;
+  const approvedCount = requests.filter((request) => request.status === 'approved').length;
+  const archivedCount = requests.filter((request) => request.status === 'archived').length;
+
+  const openApproval = (request: EnrollmentRequest) => {
+    const firstCourse = courses.find(
+      (course) => course.is_active && course.academic_year === request.academicYear,
+    );
+    setSelectedCourseId(request.approvedCourseId ?? firstCourse?.id ?? '');
+    setApprovalRequest(request);
+    setError(null);
+  };
+
+  const runMutation = async (
+    request: EnrollmentRequest,
+    mutation: () => Promise<unknown>,
+    message: string,
+  ) => {
+    setActionId(request.id);
+    setError(null);
+    setFeedback(null);
+    try {
+      await mutation();
+      await loadData();
+      setFeedback(message);
+    } catch (mutationError) {
+      setError(mutationError instanceof Error ? mutationError.message : 'No se pudo actualizar la solicitud.');
+    } finally {
+      setActionId(null);
     }
+  };
 
-    setFeedback(
-      `Solicitud procesada: Se determinó que ${request.studentFirstName} ${request.studentLastName} requiere primero ser registrado en la base escolar interna.`,
+  const confirmPendingAction = async () => {
+    if (!confirmAction) return;
+    const { request, type } = confirmAction;
+    setConfirmAction(null);
+    await runMutation(
+      request,
+      () => type === 'reject'
+        ? rejectEnrollmentRequest(request.id)
+        : archiveEnrollmentRequest(request.id),
+      type === 'reject'
+        ? `Se rechazó la solicitud de ${request.studentFirstName} ${request.studentLastName}.`
+        : `Se archivó la solicitud de ${request.studentFirstName} ${request.studentLastName}.`,
     );
   };
 
-  const archiveRequest = (request: EnrollmentRequest) => {
-    updateEnrollmentStatus(request.id, 'archived');
-    setActiveFilter('archived');
-    setFeedback(
-      `Solicitud archivada: Se cerró la solicitud de inscripción para ${request.studentFirstName} ${request.studentLastName}.`,
+  const confirmApproval = async () => {
+    if (!approvalRequest || !selectedCourseId) return;
+    const request = approvalRequest;
+    setApprovalRequest(null);
+    await runMutation(
+      request,
+      () => approveEnrollmentRequest(request.id, selectedCourseId),
+      `Se aprobó la inscripción de ${request.studentFirstName} ${request.studentLastName}.`,
     );
-  };
-
-  const deleteRequest = (request: EnrollmentRequest) => {
-    deleteEnrollmentRequest(request.id);
-    setRequests(listEnrollmentRequests());
-    setFeedback(
-      `Solicitud eliminada permanentemente: Se eliminó la solicitud de ${request.studentFirstName} ${request.studentLastName}.`,
-    );
-  };
-
-  const openEditModal = (request: EnrollmentRequest) => {
-    setEditingRequest(request);
-    setEditForm({
-      studentFirstName: request.studentFirstName,
-      studentLastName: request.studentLastName,
-      studentDni: request.studentDni,
-      birthDate: request.birthDate,
-      email: request.email,
-      phone: request.phone,
-      notes: request.notes,
-    });
-  };
-
-  const saveEdit = () => {
-    if (!editingRequest) return;
-    updateEnrollmentRequest(editingRequest.id, editForm);
-    setRequests(listEnrollmentRequests());
-    setEditingRequest(null);
-    setFeedback(`Solicitud modificada: Se actualizaron los datos de ${editForm.studentFirstName} ${editForm.studentLastName}.`);
   };
 
   return (
@@ -232,109 +183,106 @@ export const EnrollmentRequestsPage: React.FC = () => {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-2 rounded-lg bg-edu-secondary/8 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-edu-secondary">
-              <Sparkles className="h-3.5 w-3.5" />
+              <ClipboardList className="h-3.5 w-3.5" />
               Flujo de inscripción
             </span>
-            <h1 className="mt-2 text-lg font-bold text-edu-primary">
-              Desde la solicitud hasta la cuenta lista
-            </h1>
-            <p className="mt-0.5 text-xs text-edu-muted">Gestioná cada etapa del proceso de admisión</p>
+            <h1 className="mt-2 text-lg font-bold text-edu-primary">Solicitudes persistidas en Supabase</h1>
+            <p className="mt-0.5 text-xs text-edu-muted">Aprobá, rechazá o archivá solicitudes desde el flujo institucional.</p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3 w-full lg:w-auto shrink-0">
-            <div className="rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50 to-white px-4 py-3 shadow-sm hover:-translate-y-0.5 transition-all">
+          <div className="grid w-full shrink-0 gap-2 sm:grid-cols-3 lg:w-auto">
+            <div className="rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50 to-white px-4 py-3 shadow-sm">
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-amber-600">
-                <div className="flex h-5 w-5 items-center justify-center rounded-md bg-amber-200/50 text-amber-700">
-                  <ClipboardList size={12} />
-                </div>
-                Pendientes
+                <ClipboardList size={12} /> Pendientes
               </div>
-              <p className="mt-1.5 text-xl font-extrabold text-amber-800">
-                {getEnrollmentStatusCount('pending')}
-              </p>
+              <p className="mt-1.5 text-xl font-extrabold text-amber-800">{pendingCount}</p>
             </div>
-            <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white px-4 py-3 shadow-sm hover:-translate-y-0.5 transition-all">
+            <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white px-4 py-3 shadow-sm">
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600">
-                <div className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-200/50 text-emerald-700">
-                  <CheckCircle2 size={12} />
-                </div>
-                Habilitados
+                <CheckCircle2 size={12} /> Aprobadas
               </div>
-              <p className="mt-1.5 text-xl font-extrabold text-emerald-800">
-                {getEnrollmentStatusCount('approved_for_registration')}
-              </p>
+              <p className="mt-1.5 text-xl font-extrabold text-emerald-800">{approvedCount}</p>
             </div>
-            <div className="rounded-xl border border-edu-secondary/20 bg-gradient-to-br from-edu-secondary/10 to-white px-4 py-3 shadow-sm hover:-translate-y-0.5 transition-all">
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-edu-primary">
-                <div className="flex h-5 w-5 items-center justify-center rounded-md bg-edu-secondary/20 text-edu-primary">
-                  <GraduationCap size={12} />
-                </div>
-                Con Cuenta
+            <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                <FolderArchive size={12} /> Archivadas
               </div>
-              <p className="mt-1.5 text-xl font-extrabold text-edu-dark">
-                {getEnrollmentStatusCount('account_created')}
-              </p>
+              <p className="mt-1.5 text-xl font-extrabold text-slate-700">{archivedCount}</p>
             </div>
           </div>
         </div>
       </section>
 
+      {error && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-gradient-to-r from-red-50 to-white px-4 py-3 text-xs font-medium text-red-700 shadow-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button type="button" onClick={() => void loadData()} className="inline-flex items-center gap-1 font-bold underline">
+            <RefreshCw className="h-3 w-3" /> Reintentar
+          </button>
+        </div>
+      )}
+
       {feedback && (
         <div className="flex items-start gap-3 rounded-xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 text-xs font-medium text-emerald-700 shadow-sm">
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-200/50">
-            <ShieldCheck className="h-3.5 w-3.5" />
-          </div>
+          <ShieldCheck className="h-4 w-4 shrink-0" />
           <span>{feedback}</span>
         </div>
       )}
 
       <section className="rounded-2xl border border-edu-border/60 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex flex-wrap gap-1.5 border-b border-edu-border pb-4">
-          {filters.map((filter) => (
-            <button
-              key={filter.value}
-              type="button"
-              onClick={() => setActiveFilter(filter.value)}
-              className={`rounded-lg px-3.5 py-2 text-[11px] font-bold transition-all duration-200 cursor-pointer ${
-                activeFilter === filter.value
-                  ? 'bg-edu-secondary text-white shadow-sm shadow-edu-secondary/20'
-                  : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200/70'
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-edu-border pb-4">
+          <div className="flex flex-wrap gap-1.5">
+            {filters.map((filter) => (
+              <button
+                key={filter.value}
+                type="button"
+                onClick={() => setActiveFilter(filter.value)}
+                className={`rounded-lg px-3.5 py-2 text-[11px] font-bold transition-all duration-200 ${
+                  activeFilter === filter.value
+                    ? 'bg-edu-secondary text-white shadow-sm shadow-edu-secondary/20'
+                    : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200/70'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadData()}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-edu-border px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar
+          </button>
         </div>
 
-        {visibleRequests.length === 0 ? (
+        {loading ? (
+          <div className="flex min-h-56 items-center justify-center gap-2 text-sm text-edu-muted">
+            <RefreshCw className="h-4 w-4 animate-spin" /> Cargando solicitudes...
+          </div>
+        ) : visibleRequests.length === 0 ? (
           <div className="rounded-xl border border-dashed border-edu-border bg-slate-50/50 px-6 py-14 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-edu-secondary/10 to-edu-primary/5">
               <SearchCheck className="h-6 w-6 text-edu-secondary/60" />
             </div>
-            <p className="mt-3 text-sm font-bold text-slate-700">
-              No hay solicitudes en este filtro.
-            </p>
+            <p className="mt-3 text-sm font-bold text-slate-700">No hay solicitudes en este filtro.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {visibleRequests.map((request) => {
-              const stepView = getStepView(request);
-              const canResolve =
-                request.status === 'pending' || request.status === 'reviewed';
-              const canArchive =
-                request.status !== 'archived' && request.status !== 'account_created';
+              const approvedCourse = request.approvedCourseId
+                ? courses.find((course) => course.id === request.approvedCourseId)
+                : null;
+              const isBusy = actionId === request.id;
 
               return (
-                <article
-                  key={request.id}
-                  className="overflow-hidden rounded-xl border border-edu-border/60 bg-white shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
-                >
+                <article key={request.id} className="overflow-hidden rounded-xl border border-edu-border/60 bg-white shadow-sm">
                   <div className="border-b border-edu-border bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-sm font-bold text-slate-800">
-                            {request.studentFirstName} {request.studentLastName}
-                          </h2>
+                          <h2 className="text-sm font-bold text-slate-800">{request.studentFirstName} {request.studentLastName}</h2>
                           <span className={`rounded-lg px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusClasses[request.status]}`}>
                             {statusLabels[request.status]}
                           </span>
@@ -342,96 +290,53 @@ export const EnrollmentRequestsPage: React.FC = () => {
                         <p className="mt-0.5 text-[11px] text-edu-muted">
                           DNI: <span className="font-mono font-semibold">{request.studentDni}</span>
                           <span className="mx-1.5 text-slate-300">·</span>
-                          <Calendar className="mr-0.5 inline h-3 w-3 align-text-top text-edu-muted" />
-                          {formatDate(request.createdAt)}
+                          <Calendar className="mr-0.5 inline h-3 w-3 align-text-top" /> {formatDate(request.createdAt)}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1.5 rounded-lg bg-white border border-edu-border/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                      <div className="flex items-center gap-1.5 rounded-lg border border-edu-border/60 bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                         <GraduationCap className="h-3.5 w-3.5 text-edu-secondary" />
-                        <span>{request.educationalLevel}</span>
-                        <span className="text-slate-300">·</span>
-                        <span>{request.schoolYear}</span>
+                        <span>{request.educationalLevel}</span><span className="text-slate-300">·</span><span>{request.schoolYear}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid gap-4 p-5 md:grid-cols-3 text-sm">
+                  <div className="grid gap-4 p-5 text-sm md:grid-cols-3">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-edu-muted">
-                        <User size={12} /> Responsable tutor
-                      </div>
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-edu-muted"><User size={12} /> Responsable</div>
                       <p className="text-sm font-semibold text-slate-800">{request.responsibleFullName}</p>
-                      <p className="text-xs text-edu-muted">Relación: {request.responsibleRelation}</p>
+                      <p className="text-xs text-edu-muted">{request.responsibleRelation} · DNI {request.responsibleDni}</p>
                     </div>
                     <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-edu-muted">
-                        <Mail size={12} /> Contacto
-                      </div>
-                      <p className="text-sm font-semibold text-slate-800 truncate">{request.email}</p>
-                      <p className="flex items-center gap-1 text-xs text-edu-muted">
-                        <Phone size={10} /> {request.phone}
-                      </p>
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-edu-muted"><Mail size={12} /> Contacto</div>
+                      <p className="truncate text-sm font-semibold text-slate-800">{request.email}</p>
+                      <p className="flex items-center gap-1 text-xs text-edu-muted"><Phone size={10} /> {request.phone}</p>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-edu-muted">Observaciones</div>
-                      <p className="text-xs italic text-slate-600 bg-slate-50/80 p-2.5 rounded-lg border border-edu-border max-h-16 overflow-y-auto">
-                        "{request.notes || 'Sin observaciones adicionales.'}"
-                      </p>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-edu-muted">Datos académicos</div>
+                      <p className="text-xs text-slate-600">Año lectivo: <strong>{request.academicYear}</strong></p>
+                      <p className="text-xs text-slate-600">Turno: <strong>{request.turn}</strong></p>
+                      {approvedCourse && <p className="truncate text-xs text-emerald-700">Curso: <strong>{courseLabel(approvedCourse)}</strong></p>}
                     </div>
                   </div>
 
-                  <div className={`flex flex-col md:flex-row md:items-center md:justify-between gap-3 px-5 py-3.5 border-t ${stepView.accent}`}>
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-md bg-white/70 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-edu-muted border border-edu-border/40">
-                          {stepView.eyebrow}
-                        </span>
-                        <h3 className="text-xs font-bold text-slate-800">{stepView.headline}</h3>
-                      </div>
-                      <p className="text-[11px] text-slate-600 leading-relaxed max-w-3xl">{stepView.body}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {canResolve && (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmAction({ type: 'resolve', request })}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-edu-secondary px-3.5 py-2 text-[11px] font-bold text-white shadow-sm shadow-edu-secondary/20 hover:bg-edu-secondary-dark transition-all"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Procesar
-                        </button>
+                  <div className="flex flex-col gap-3 border-t border-edu-border bg-slate-50/60 px-5 py-3.5 md:flex-row md:items-center md:justify-between">
+                    <p className="max-w-3xl text-[11px] leading-relaxed text-slate-600">{request.notes || 'Sin observaciones adicionales.'}</p>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {request.status === 'pending' && (
+                        <>
+                          <button type="button" disabled={isBusy} onClick={() => openApproval(request)} className="inline-flex items-center gap-1.5 rounded-lg bg-edu-secondary px-3.5 py-2 text-[11px] font-bold text-white shadow-sm hover:bg-edu-secondary-dark disabled:cursor-not-allowed disabled:opacity-50">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Aprobar
+                          </button>
+                          <button type="button" disabled={isBusy} onClick={() => setConfirmAction({ type: 'reject', request })} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3.5 py-2 text-[11px] font-bold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">
+                            <XCircle className="h-3.5 w-3.5" /> Rechazar
+                          </button>
+                        </>
                       )}
-                      {!canResolve && stepView.ctaPath && stepView.ctaLabel && (
-                        <Link
-                          to={stepView.ctaPath}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-edu-secondary px-3.5 py-2 text-[11px] font-bold text-white shadow-sm shadow-edu-secondary/20 hover:bg-edu-secondary-dark transition-all"
-                        >
-                          {stepView.ctaLabel}
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </Link>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(request)}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white border border-edu-border px-3.5 py-2 text-[11px] font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
-                      >
-                        <Pencil className="h-3.5 w-3.5" /> Editar
-                      </button>
-                      {canArchive && (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmAction({ type: 'archive', request })}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white border border-edu-border px-3.5 py-2 text-[11px] font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
-                        >
+                      {request.status !== 'archived' && (
+                        <button type="button" disabled={isBusy} onClick={() => setConfirmAction({ type: 'archive', request })} className="inline-flex items-center gap-1.5 rounded-lg border border-edu-border bg-white px-3.5 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">
                           <FolderArchive className="h-3.5 w-3.5" /> Archivar
                         </button>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setConfirmAction({ type: 'delete', request })}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white border border-red-200 px-3.5 py-2 text-[11px] font-bold text-red-600 shadow-sm hover:bg-red-50 transition-all"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" /> Eliminar
-                      </button>
                     </div>
                   </div>
                 </article>
@@ -441,159 +346,45 @@ export const EnrollmentRequestsPage: React.FC = () => {
         )}
       </section>
 
+      {approvalRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-edu-border bg-white p-5 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">Aprobar inscripción</h3>
+                <p className="mt-1 text-xs text-edu-muted">Elegí el curso activo del año {approvalRequest.academicYear}.</p>
+              </div>
+              <button type="button" onClick={() => setApprovalRequest(null)} className="rounded-lg p-1.5 text-edu-muted hover:bg-slate-100"><X size={16} /></button>
+            </div>
+            <label className="mt-5 block text-xs font-semibold text-slate-700">
+              Curso de destino
+              <select value={selectedCourseId} onChange={(event) => setSelectedCourseId(event.target.value)} className="mt-2 h-10 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10">
+                <option value="">Seleccioná un curso</option>
+                {courses
+                  .filter((course) => course.is_active && course.academic_year === approvalRequest.academicYear)
+                  .map((course) => <option key={course.id} value={course.id}>{courseLabel(course)}</option>)}
+              </select>
+            </label>
+            <div className="mt-5 flex gap-2">
+              <button type="button" onClick={() => setApprovalRequest(null)} className="flex-1 rounded-xl border border-edu-border px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
+              <button type="button" disabled={!selectedCourseId || actionId === approvalRequest.id} onClick={() => void confirmApproval()} className="flex-1 rounded-xl bg-edu-secondary px-3 py-2.5 text-xs font-semibold text-white hover:bg-edu-secondary-dark disabled:cursor-not-allowed disabled:opacity-50">Confirmar aprobación</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-edu-border bg-white p-5 shadow-2xl space-y-4">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-50 to-red-100 text-red-600 shadow-sm">
-              {confirmAction.type === 'delete' ? <Trash2 size={20} /> : <ShieldCheck size={20} />}
+          <div className="w-full max-w-sm rounded-2xl border border-edu-border bg-white p-5 shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600"><AlertTriangle size={20} /></div>
+            <div className="mt-4 space-y-1.5 text-center">
+              <h3 className="text-sm font-bold text-slate-800">{confirmAction.type === 'reject' ? '¿Rechazar solicitud?' : '¿Archivar solicitud?'}</h3>
+              <p className="text-xs leading-relaxed text-edu-muted">{confirmAction.request.studentFirstName} {confirmAction.request.studentLastName} cambiará a estado {confirmAction.type === 'reject' ? 'rechazada' : 'archivada'}.</p>
             </div>
-            <div className="space-y-1.5 text-center">
-              <h3 className="text-sm font-bold text-slate-800">
-                {confirmAction.type === 'resolve'
-                  ? '¿Aprobar solicitud?'
-                  : confirmAction.type === 'delete'
-                    ? '¿Eliminar permanentemente?'
-                    : '¿Cerrar caso?'}
-              </h3>
-              <p className="text-xs text-edu-muted leading-relaxed">
-                {confirmAction.type === 'resolve'
-                  ? `${confirmAction.request.studentFirstName} ${confirmAction.request.studentLastName} quedará habilitado para auto-registrarse.`
-                  : confirmAction.type === 'delete'
-                    ? `Se eliminará la solicitud de ${confirmAction.request.studentFirstName} ${confirmAction.request.studentLastName}. Esta acción no se puede deshacer.`
-                    : `Se archivará la solicitud de ${confirmAction.request.studentFirstName} ${confirmAction.request.studentLastName}.`}
-              </p>
+            <div className="mt-5 flex gap-2">
+              <button type="button" onClick={() => setConfirmAction(null)} className="flex-1 rounded-xl border border-edu-border px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
+              <button type="button" onClick={() => void confirmPendingAction()} className="flex-1 rounded-xl bg-slate-700 px-3 py-2.5 text-xs font-semibold text-white hover:bg-slate-800">Confirmar</button>
             </div>
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setConfirmAction(null)}
-                className="flex-1 h-10 cursor-pointer rounded-xl border border-edu-border bg-white text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const req = confirmAction.request;
-                  const actionType = confirmAction.type;
-                  setConfirmAction(null);
-                  if (actionType === 'resolve') resolveRequest(req);
-                  else if (actionType === 'delete') deleteRequest(req);
-                  else archiveRequest(req);
-                }}
-                className={`flex-1 h-10 cursor-pointer rounded-xl text-xs font-semibold text-white shadow-sm transition-all ${
-                  confirmAction.type === 'resolve'
-                    ? 'bg-edu-secondary hover:bg-edu-secondary-dark'
-                    : confirmAction.type === 'delete'
-                      ? 'bg-edu-danger hover:bg-red-700'
-                      : 'bg-slate-700 hover:bg-slate-800'
-                }`}
-              >
-                {confirmAction.type === 'resolve' ? 'Sí, habilitar' : confirmAction.type === 'delete' ? 'Sí, eliminar' : 'Sí, archivar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editingRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-edu-border bg-white p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-edu-secondary/10 to-edu-secondary/5 text-edu-secondary">
-                  <Pencil size={15} />
-                </div>
-                <h3 className="text-sm font-bold text-slate-800">Editar solicitud</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingRequest(null)}
-                className="cursor-pointer rounded-lg p-1.5 text-edu-muted hover:bg-slate-100"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Nombre</span>
-                  <input type="text" value={editForm.studentFirstName} onChange={(e) => setEditForm(f => ({ ...f, studentFirstName: e.target.value }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Apellido</span>
-                  <input type="text" value={editForm.studentLastName} onChange={(e) => setEditForm(f => ({ ...f, studentLastName: e.target.value }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
-                </label>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">DNI</span>
-                  <input type="text" value={editForm.studentDni} onChange={(e) => setEditForm(f => ({ ...f, studentDni: e.target.value.replace(/\D/g, '') }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Fecha nacimiento</span>
-                  <input type="date" value={editForm.birthDate} onChange={(e) => setEditForm(f => ({ ...f, birthDate: e.target.value }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
-                </label>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Email</span>
-                  <input type="email" value={editForm.email} onChange={(e) => setEditForm(f => ({ ...f, email: e.target.value }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Teléfono</span>
-                  <input type="text" value={editForm.phone} onChange={(e) => setEditForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '') }))} className="h-9 w-full rounded-lg border border-edu-border bg-white px-3 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
-                </label>
-              </div>
-              <label className="block">
-                <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-edu-muted">Observaciones</span>
-                <textarea value={editForm.notes} onChange={(e) => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="w-full rounded-lg border border-edu-border bg-white px-3 py-2 text-xs outline-none transition-all focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/10" />
-              </label>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button type="button" onClick={() => setEditingRequest(null)} className="flex-1 h-10 cursor-pointer rounded-xl border border-edu-border bg-white text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50">Cancelar</button>
-              <button type="button" onClick={saveEdit} className="flex-1 h-10 cursor-pointer rounded-xl bg-edu-secondary text-xs font-semibold text-white shadow-sm shadow-edu-secondary/20 transition-all hover:bg-edu-secondary-dark">Guardar cambios</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {successModalData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-edu-border bg-white p-5 shadow-2xl text-center space-y-4">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-600 shadow-sm">
-              <CheckCircle2 className="h-8 w-8" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-base font-bold text-slate-800">¡Alta completada!</h3>
-              <p className="text-xs text-edu-muted">Alumno dado de alta institucional correctamente.</p>
-            </div>
-            <div className="rounded-xl bg-gradient-to-br from-slate-50 to-white p-3.5 text-left space-y-2 border border-edu-border/50">
-              <div>
-                <span className="text-[8px] font-bold uppercase tracking-wider text-edu-muted">Alumno</span>
-                <p className="text-sm font-bold text-slate-800">{successModalData.studentName}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 border-t border-edu-border/80 pt-2">
-                <div>
-                  <span className="text-[8px] font-bold uppercase tracking-wider text-edu-muted">DNI</span>
-                  <p className="text-xs font-semibold text-slate-700">{successModalData.studentDni}</p>
-                </div>
-                <div>
-                  <span className="text-[8px] font-bold uppercase tracking-wider text-edu-muted">Nivel</span>
-                  <p className="text-xs font-semibold text-slate-700">{successModalData.level}</p>
-                </div>
-              </div>
-            </div>
-            <p className="text-xs text-edu-muted leading-relaxed bg-gradient-to-r from-edu-secondary/10 to-white px-4 py-3 rounded-xl border border-edu-secondary/20">
-              Se enviará el correo de aceptación al tutor con la información.
-            </p>
-            <button
-              type="button"
-              onClick={() => setSuccessModalData(null)}
-              className="w-full h-10 cursor-pointer rounded-xl bg-edu-secondary text-xs font-semibold text-white shadow-sm shadow-edu-secondary/20 transition-all hover:bg-edu-secondary-dark"
-            >
-              Entendido
-            </button>
           </div>
         </div>
       )}

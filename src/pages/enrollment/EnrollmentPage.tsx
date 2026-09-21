@@ -308,12 +308,14 @@ function ButtonRow({
   onNext,
   nextLabel = 'Continuar',
   submit = false,
+  disabled = false,
 }: {
   canGoBack: boolean;
   onBack: () => void;
   onNext?: () => void;
   nextLabel?: string;
   submit?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <div className="mt-8 flex items-center justify-between gap-3 max-sm:flex-col">
@@ -333,7 +335,8 @@ function ButtonRow({
       <button
         type={submit ? 'submit' : 'button'}
         onClick={submit ? undefined : onNext}
-        className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-edu-primary px-5 text-[13px] font-extrabold text-white shadow-[0_10px_20px_rgba(20,82,200,0.24)] transition hover:bg-edu-secondary-dark focus:outline-none focus:ring-4 focus:ring-edu-primary/20 max-sm:w-full"
+        disabled={disabled}
+        className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-edu-primary px-5 text-[13px] font-extrabold text-white shadow-[0_10px_20px_rgba(20,82,200,0.24)] transition hover:bg-edu-secondary-dark focus:outline-none focus:ring-4 focus:ring-edu-primary/20 disabled:cursor-not-allowed disabled:opacity-60 max-sm:w-full"
       >
         {nextLabel}
         {submit ? <Send className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
@@ -373,6 +376,7 @@ export const EnrollmentPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submittedRequest, setSubmittedRequest] = useState<EnrollmentRequest | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const requestNumber = useMemo(() => formatRequestNumber(submittedRequest), [submittedRequest]);
 
   const selectedCourses = getCourses(formData.educationalLevel);
@@ -518,7 +522,7 @@ export const EnrollmentPage: React.FC = () => {
     setStep((current) => Math.max(current - 1, 1));
   };
 
-  const submitRequest = (event: React.FormEvent) => {
+  const submitRequest = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
 
@@ -527,9 +531,10 @@ export const EnrollmentPage: React.FC = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const request = createEnrollmentRequest(formData);
-      setSubmittedRequest(request);
+      setSubmittedRequest(await request);
       setStep(5);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (submissionError) {
@@ -538,6 +543,8 @@ export const EnrollmentPage: React.FC = () => {
           ? submissionError.message
           : 'No se pudo registrar la solicitud.',
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -802,7 +809,13 @@ export const EnrollmentPage: React.FC = () => {
                   )}
                 </div>
 
-                <ButtonRow canGoBack onBack={goBack} submit nextLabel="Enviar solicitud" />
+                <ButtonRow
+                  canGoBack
+                  onBack={goBack}
+                  submit
+                  disabled={isSubmitting}
+                  nextLabel={isSubmitting ? 'Enviando...' : 'Enviar solicitud'}
+                />
               </div>
             )}
           </form>

@@ -1,9 +1,7 @@
 export type EnrollmentStatus =
   | 'pending'
-  | 'reviewed'
-  | 'approved_for_registration'
-  | 'pending_admin_creation'
-  | 'account_created'
+  | 'approved'
+  | 'rejected'
   | 'archived';
 
 export interface EnrollmentRequestInput {
@@ -24,7 +22,13 @@ export interface EnrollmentRequestInput {
 
 export interface EnrollmentRequest extends EnrollmentRequestInput {
   id: string;
+  academicYear: number;
   createdAt: string;
+  updatedAt: string;
   status: EnrollmentStatus;
   source: 'public-form';
+  approvedCourseId: string | null;
+  studentId: string | null;
+  enrollmentId: string | null;
+  rejectionReason: string | null;
 }
