@@ -20,6 +20,12 @@ function repositoryError(message: string): Error {
   return new Error(`No se pudo completar la operación académica: ${message}`);
 }
 
+function rpcResult<T>(data: T | T[] | null): T {
+  const result = Array.isArray(data) ? data[0] : data;
+  if (!result) throw repositoryError('el servidor no devolvió el registro actualizado');
+  return result;
+}
+
 export async function listEducationalLevels(): Promise<EducationalLevel[]> {
   const { data, error } = await requireSupabase()
     .from('educational_levels')
@@ -146,51 +152,36 @@ export async function updateSubject(
   return data as Subject;
 }
 
-const personSelect = 'id, first_name, last_name, email, phone, is_active';
+const personSelect = 'id, first_name, last_name, email, phone, dni, is_active';
 
 export async function listTeachers(): Promise<Teacher[]> {
   const { data, error } = await requireSupabase()
     .from('teachers')
-    .select(`id, teacher_number, is_active, person:people!inner(${personSelect})`)
+    .select(`id, teacher_number, specialty, is_active, person:people!inner(${personSelect})`)
     .order('created_at', { ascending: false });
 
   if (error) throw repositoryError(error.message);
   return ((data ?? []) as Array<Teacher & { person: Relation<Person> }>)
-    .map((teacher) => ({ ...teacher, person: one(teacher.person) }))
+    .map((teacher) => ({ ...teacher, dni: one(teacher.person)?.dni ?? null, person: one(teacher.person) }))
     .filter((teacher): teacher is Teacher => teacher.person !== null);
 }
 
 export async function createTeacher(input: {
   first_name: string;
   last_name: string;
-  email?: string;
-  phone?: string;
-  teacher_number?: string;
+  email?: string | null;
+  phone?: string | null;
+  teacher_number?: string | null;
+  dni?: string | null;
+  specialty?: string | null;
 }): Promise<Teacher> {
-  // ponytail: keep the two-step write until onboarding needs an atomic RPC transaction.
-  const client = requireSupabase();
-  const { data: person, error: personError } = await client
-    .from('people')
-    .insert({
-      first_name: input.first_name,
-      last_name: input.last_name,
-      email: input.email || null,
-      phone: input.phone || null,
-    })
-    .select(personSelect)
-    .single();
+  const { data, error } = await requireSupabase().rpc('create_teacher', { p_payload: input });
 
-  if (personError) throw repositoryError(personError.message);
-
-  const { data: teacher, error: teacherError } = await client
-    .from('teachers')
-    .insert({ person_id: (person as Person).id, teacher_number: input.teacher_number || null })
-    .select(`id, teacher_number, is_active, person:people!inner(${personSelect})`)
-    .single();
-
-  if (teacherError) throw repositoryError(teacherError.message);
-  const result = teacher as Teacher & { person: Relation<Person> };
-  return { ...result, person: one(result.person) as Person };
+  if (error) throw repositoryError(error.message);
+  const created = rpcResult<{ id: string }>(data);
+  const teacher = (await listTeachers()).find((item) => item.id === created.id);
+  if (!teacher) throw repositoryError('el servidor no devolvió el docente creado');
+  return teacher;
 }
 
 export async function updateTeacher(
@@ -201,45 +192,18 @@ export async function updateTeacher(
     email?: string | null;
     phone?: string | null;
     teacher_number?: string | null;
+    dni?: string | null;
+    specialty?: string | null;
     is_active?: boolean;
   },
-): Promise<void> {
-  const client = requireSupabase();
-  const { data: teacher, error: teacherError } = await client
-    .from('teachers')
-    .select('person_id')
-    .eq('id', id)
-    .single();
+): Promise<Teacher> {
+  const { data, error } = await requireSupabase().rpc('update_teacher', { p_payload: { id, ...input } });
 
-  if (teacherError) throw repositoryError(teacherError.message);
-
-  const personFields = {
-    first_name: input.first_name,
-    last_name: input.last_name,
-    email: input.email,
-    phone: input.phone,
-  };
-  const filteredPersonFields = Object.fromEntries(
-    Object.entries(personFields).filter(([, value]) => value !== undefined),
-  );
-
-  if (Object.keys(filteredPersonFields).length > 0) {
-    const { error } = await client.from('people').update(filteredPersonFields).eq('id', teacher.person_id);
-    if (error) throw repositoryError(error.message);
-  }
-
-  const teacherFields = {
-    teacher_number: input.teacher_number,
-    is_active: input.is_active,
-  };
-  const filteredTeacherFields = Object.fromEntries(
-    Object.entries(teacherFields).filter(([, value]) => value !== undefined),
-  );
-
-  if (Object.keys(filteredTeacherFields).length > 0) {
-    const { error } = await client.from('teachers').update(filteredTeacherFields).eq('id', id);
-    if (error) throw repositoryError(error.message);
-  }
+  if (error) throw repositoryError(error.message);
+  const updated = rpcResult<{ id: string }>(data);
+  const teacher = (await listTeachers()).find((item) => item.id === updated.id);
+  if (!teacher) throw repositoryError('el servidor no devolvió el docente actualizado');
+  return teacher;
 }
 
 type StudentRow = Student & {
@@ -257,6 +221,7 @@ export async function listStudents(): Promise<Student[]> {
   return (data as StudentRow[] | null ?? [])
     .map((student) => ({
       ...student,
+      dni: one(student.person)?.dni ?? null,
       person: one(student.person),
       enrollments: (student.enrollments ?? []).map((enrollment) => ({
         ...enrollment,
@@ -274,34 +239,18 @@ export async function listStudents(): Promise<Student[]> {
 export async function createStudent(input: {
   first_name: string;
   last_name: string;
-  email?: string;
-  phone?: string;
-  student_number?: string;
+  email?: string | null;
+  phone?: string | null;
+  student_number?: string | null;
+  dni?: string | null;
 }): Promise<Student> {
-  // ponytail: keep the two-step write until onboarding needs an atomic RPC transaction.
-  const client = requireSupabase();
-  const { data: person, error: personError } = await client
-    .from('people')
-    .insert({
-      first_name: input.first_name,
-      last_name: input.last_name,
-      email: input.email || null,
-      phone: input.phone || null,
-    })
-    .select(personSelect)
-    .single();
+  const { data, error } = await requireSupabase().rpc('create_student', { p_payload: input });
 
-  if (personError) throw repositoryError(personError.message);
-
-  const { data: student, error: studentError } = await client
-    .from('students')
-    .insert({ person_id: (person as Person).id, student_number: input.student_number || null })
-    .select(`id, student_number, is_active, person:people!inner(${personSelect})`)
-    .single();
-
-  if (studentError) throw repositoryError(studentError.message);
-  const result = student as Student & { person: Relation<Person> };
-  return { ...result, person: one(result.person) as Person, enrollments: [] };
+  if (error) throw repositoryError(error.message);
+  const created = rpcResult<{ id: string }>(data);
+  const student = (await listStudents()).find((item) => item.id === created.id);
+  if (!student) throw repositoryError('el servidor no devolvió el alumno creado');
+  return student;
 }
 
 export async function updateStudent(
@@ -312,45 +261,17 @@ export async function updateStudent(
     email?: string | null;
     phone?: string | null;
     student_number?: string | null;
+    dni?: string | null;
     is_active?: boolean;
   },
-): Promise<void> {
-  const client = requireSupabase();
-  const { data: student, error: studentError } = await client
-    .from('students')
-    .select('person_id')
-    .eq('id', id)
-    .single();
+): Promise<Student> {
+  const { data, error } = await requireSupabase().rpc('update_student', { p_payload: { id, ...input } });
 
-  if (studentError) throw repositoryError(studentError.message);
-
-  const personFields = {
-    first_name: input.first_name,
-    last_name: input.last_name,
-    email: input.email,
-    phone: input.phone,
-  };
-  const filteredPersonFields = Object.fromEntries(
-    Object.entries(personFields).filter(([, value]) => value !== undefined),
-  );
-
-  if (Object.keys(filteredPersonFields).length > 0) {
-    const { error } = await client.from('people').update(filteredPersonFields).eq('id', student.person_id);
-    if (error) throw repositoryError(error.message);
-  }
-
-  const studentFields = {
-    student_number: input.student_number,
-    is_active: input.is_active,
-  };
-  const filteredStudentFields = Object.fromEntries(
-    Object.entries(studentFields).filter(([, value]) => value !== undefined),
-  );
-
-  if (Object.keys(filteredStudentFields).length > 0) {
-    const { error } = await client.from('students').update(filteredStudentFields).eq('id', id);
-    if (error) throw repositoryError(error.message);
-  }
+  if (error) throw repositoryError(error.message);
+  const updated = rpcResult<{ id: string }>(data);
+  const student = (await listStudents()).find((item) => item.id === updated.id);
+  if (!student) throw repositoryError('el servidor no devolvió el alumno actualizado');
+  return student;
 }
 
 export async function createStudentEnrollment(input: {
@@ -383,7 +304,7 @@ export async function updateStudentEnrollment(
   return data as StudentEnrollment;
 }
 
-const courseSubjectSelect = `id, course_id, subject_id, teacher_id, academic_year, is_active, subject:subjects(id, code, name, is_active), teacher:teachers(id, teacher_number, is_active, person:people!inner(${personSelect}))`;
+const courseSubjectSelect = `id, course_id, subject_id, teacher_id, academic_year, is_active, subject:subjects(id, code, name, is_active), teacher:teachers(id, teacher_number, specialty, is_active, person:people!inner(${personSelect}))`;
 
 type CourseSubjectRow = Omit<CourseSubject, 'subject' | 'teacher'> & {
   subject: Relation<Subject>;

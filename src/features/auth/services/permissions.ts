@@ -27,7 +27,7 @@ export type Permission =
   | 'dashboard:view';
 
 const rolePermissions: Record<DemoUserRole, Permission[]> = {
-  authority: [
+  superadmin: [
     'enrollment:view',
     'enrollment:create',
     'enrollment:edit',

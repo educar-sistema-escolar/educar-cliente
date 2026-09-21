@@ -3,7 +3,7 @@ import { getDynamicInstitutionalStudentByDni } from '../../inscripcion/services/
 import { institutionalStudents } from '../data/institutionalStudents';
 import { localDemoAccounts } from '../data/localDemoAccounts';
 import { saveLocalCredential, verifyLocalCredential } from './localCredentialsStore';
-import { loginAuthority } from './supabaseAuth';
+import { loginSuperadmin } from './supabaseAuth';
 import type {
   AuthSession,
   DemoUserRole,
@@ -105,7 +105,7 @@ function inferBackendRole(email: string): DemoUserRole | null {
     return 'student';
   }
 
-  return 'authority';
+  return 'superadmin';
 }
 
 function findLocalDemoAccount(email: string): LocalDemoAccount | null {
@@ -328,8 +328,8 @@ export async function loginWithEmail(email: string, password: string) {
   const localAccount = findLocalDemoAccount(normalizedEmail);
   const registeredUser = findRegisteredUserByEmail(normalizedEmail);
 
-  if (normalizedEmail === ADMIN_EMAIL || localAccount?.role === 'authority') {
-    return loginAuthority(normalizedEmail, password);
+  if (normalizedEmail === ADMIN_EMAIL || localAccount?.role === 'superadmin') {
+    return loginSuperadmin(normalizedEmail, password);
   }
 
   // Las cuentas publicadas en el footer son siempre válidas en esta demo.
@@ -583,7 +583,7 @@ export function changeUserPassword(email: string, newPassword: string): void {
 
 export function getRoleHomePath(role: DemoUserRole) {
   switch (role) {
-    case 'authority':
+    case 'superadmin':
       return '/privado/solicitudes';
     case 'teacher':
       return '/docentes';
@@ -597,8 +597,8 @@ export function getRoleHomePath(role: DemoUserRole) {
 
 export function getRoleLabel(role: DemoUserRole) {
   switch (role) {
-    case 'authority':
-      return 'Autoridad';
+    case 'superadmin':
+      return 'Superadministrador';
     case 'teacher':
       return 'Docente';
     case 'parent':
@@ -611,7 +611,7 @@ export function getRoleLabel(role: DemoUserRole) {
 
 export function getRoleAreaLabel(role: DemoUserRole) {
   switch (role) {
-    case 'authority':
+    case 'superadmin':
       return 'Panel institucional';
     case 'teacher':
       return 'Portal docente';

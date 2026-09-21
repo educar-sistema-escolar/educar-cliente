@@ -30,7 +30,7 @@ const navigationLinks = [
 
 function getRoleIcon(role: DemoUserRole) {
   switch (role) {
-    case 'authority':
+    case 'superadmin':
       return <LayoutDashboard size={14} />;
     case 'teacher':
       return <School size={14} />;

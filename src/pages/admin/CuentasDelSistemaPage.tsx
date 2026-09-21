@@ -12,7 +12,7 @@ interface SystemAccount {
   id: string;
   name: string;
   email: string;
-  role: DemoUserRole | 'authority';
+  role: DemoUserRole | 'superadmin';
   dni?: string;
   status: AccountStatus;
 }
@@ -21,14 +21,14 @@ const roleLabels: Record<string, string> = {
   student: 'Alumno',
   teacher: 'Docente',
   parent: 'Familia',
-  authority: 'Autoridad',
+  superadmin: 'Superadministrador',
 };
 
 const roleColors: Record<string, string> = {
   student: 'bg-edu-secondary/10 text-edu-primary border border-edu-secondary/30',
   teacher: 'bg-purple-50 text-purple-700 border border-purple-200/50',
   parent: 'bg-amber-50 text-amber-700 border border-amber-200/50',
-  authority: 'bg-violet-50 text-violet-700 border border-violet-200/50',
+  superadmin: 'bg-violet-50 text-violet-700 border border-violet-200/50',
 };
 
 export const CuentasDelSistemaPage: React.FC = () => {
@@ -366,7 +366,7 @@ export const CuentasDelSistemaPage: React.FC = () => {
                   style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")` }}
                 >
                   <option value="">Seleccionar rol</option>
-                  <option value="authority">Autoridad</option>
+                  <option value="superadmin">Superadministrador</option>
                   <option value="teacher">Docente</option>
                   <option value="parent">Familia</option>
                   <option value="student">Alumno</option>

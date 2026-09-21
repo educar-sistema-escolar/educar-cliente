@@ -44,12 +44,15 @@ export type Person = {
   last_name: string;
   email: string | null;
   phone: string | null;
+  dni: string | null;
   is_active: boolean;
 };
 
 export type Teacher = {
   id: string;
   teacher_number: string | null;
+  dni: string | null;
+  specialty: string | null;
   is_active: boolean;
   person: Person;
 };
@@ -67,6 +70,7 @@ export type StudentEnrollment = {
 export type Student = {
   id: string;
   student_number: string | null;
+  dni: string | null;
   is_active: boolean;
   person: Person;
   enrollments: StudentEnrollment[];

@@ -78,7 +78,7 @@ const socialLinks = [
 ];
 
 const demoRolePresentation: Record<DemoUserRole, { label: string; className: string }> = {
-  authority: { label: 'Autoridad', className: 'text-edu-secondary-light' },
+  superadmin: { label: 'Superadministrador', className: 'text-edu-secondary-light' },
   teacher: { label: 'Docente', className: 'text-emerald-400' },
   parent: { label: 'Familia', className: 'text-amber-400' },
   student: { label: 'Estudiante', className: 'text-sky-400' },

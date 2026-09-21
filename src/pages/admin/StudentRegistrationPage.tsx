@@ -63,8 +63,8 @@ export const StudentRegistrationPage: React.FC = () => {
 
     const session = getSession();
 
-    if (!session || session.role !== 'authority') {
-      setError('Necesitás iniciar sesión como autoridad para crear la cuenta.');
+    if (!session || session.role !== 'superadmin') {
+      setError('Necesitás iniciar sesión como superadministrador para crear la cuenta.');
       return;
     }
 

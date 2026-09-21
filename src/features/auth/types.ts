@@ -1,4 +1,4 @@
-export type DemoUserRole = 'authority' | 'student' | 'parent' | 'teacher';
+export type DemoUserRole = 'superadmin' | 'student' | 'parent' | 'teacher';
 
 export type AuthSource = 'backend' | 'local' | 'supabase';
 
@@ -44,7 +44,7 @@ export interface LocalDemoAccount {
   email: string;
   password: string;
   name: string;
-  role: Extract<DemoUserRole, 'authority' | 'parent' | 'teacher'>;
+  role: Extract<DemoUserRole, 'superadmin' | 'parent' | 'teacher'>;
   summary: string;
   avatar: string;
   highlights: string[];
