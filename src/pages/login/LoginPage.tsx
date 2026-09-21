@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   CheckCircle2,
@@ -13,29 +13,21 @@ import {
   Users,
   LogIn,
 } from 'lucide-react';
-import {
-  getRoleHomePath,
-  getSession,
-  loginWithEmail,
-} from '../../features/auth/services/demoAuth';
-import { localDemoAccounts } from '../../features/auth/data/localDemoAccounts';
+import { getSupabaseAdminSession, loginSuperadmin } from '../../features/auth/services/supabaseAuth';
 
-const LoginForm: React.FC<{ demoRole: string | null }> = ({ demoRole }) => {
+const LoginForm: React.FC = () => {
   const navigate = useNavigate();
-  const demoCredentials = localDemoAccounts.find((account) => account.role === demoRole);
-  const [email, setEmail] = useState(() => demoCredentials?.email ?? '');
-  const [password, setPassword] = useState(() => demoCredentials?.password ?? '');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const session = getSession();
-
-    if (session) {
-      navigate(getRoleHomePath(session.role), { replace: true });
-    }
+    void getSupabaseAdminSession().then((session) => {
+      if (session) navigate('/privado', { replace: true });
+    });
   }, [navigate]);
 
   async function handleSubmit(event: React.FormEvent) {
@@ -51,11 +43,11 @@ const LoginForm: React.FC<{ demoRole: string | null }> = ({ demoRole }) => {
     setIsSubmitting(true);
 
     try {
-      const session = await loginWithEmail(email, password);
+      await loginSuperadmin(email, password);
       setSuccessMessage('Acceso validado. Redirigiendo al espacio correspondiente...');
 
       window.setTimeout(() => {
-        navigate(getRoleHomePath(session.role), { replace: true });
+        navigate('/privado', { replace: true });
       }, 700);
     } catch (loginError) {
       setError(
@@ -160,12 +152,11 @@ const LoginForm: React.FC<{ demoRole: string | null }> = ({ demoRole }) => {
               </div>
               <div>
                 <h3 className="text-[14.5px] font-bold text-white leading-snug">Gestión Académica Integral</h3>
-                <p className="text-[11px] text-edu-secondary-light/80 mt-0.5">Acceso simplificado sin selectores de rol</p>
+                <p className="text-[11px] text-edu-secondary-light/80 mt-0.5">Acceso administrativo para superadministradores</p>
               </div>
             </div>
             <p className="text-xs leading-relaxed text-edu-secondary-light/70">
-              Nuestro sistema detecta automáticamente tu perfil para dirigirte a tu panel correspondiente.
-              Si todavía no has registrado tu acceso y eres alumno o familia de la institución, realiza el proceso de registro con tu DNI.
+              El acceso administrativo usa Supabase Auth y valida tu perfil institucional antes de abrir el panel.
             </p>
           </div>
 
@@ -201,7 +192,7 @@ const LoginForm: React.FC<{ demoRole: string | null }> = ({ demoRole }) => {
                     Ingresar al portal
                   </h2>
                   <p className="text-xs leading-relaxed text-slate-500">
-                    El login se mantiene solo por correo y contraseña. El sistema redirigirá automáticamente según tu perfil.
+                    Ingresá con una cuenta institucional activa cuyo perfil tenga el rol superadmin.
                   </p>
                 </div>
               </div>
@@ -358,10 +349,7 @@ const LoginForm: React.FC<{ demoRole: string | null }> = ({ demoRole }) => {
 };
 
 export const LoginPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const demoRole = searchParams.get('demo');
-
-  return <LoginForm key={demoRole ?? 'manual'} demoRole={demoRole} />;
+  return <LoginForm />;
 };
 
 

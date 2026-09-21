@@ -120,7 +120,7 @@ function App() {
             </SupabaseAdminRoute>
           }
         >
-          <Route index element={<Navigate to="solicitudes" replace />} />
+          <Route index element={<Navigate to="niveles" replace />} />
           <Route path="solicitudes" element={<EnrollmentRequestsPage />} />
           <Route path="opiniones" element={<OpinionModerationPage />} />
           <Route path="noticias" element={<GestionNoticiasPage />} />
