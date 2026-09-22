@@ -5,6 +5,8 @@ import {
   ArrowLeft,
   Bell,
   ClipboardList,
+  ChevronDown,
+  ChevronRight,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -25,10 +27,6 @@ import { getEnrollmentStatusCount } from '../../features/inscripcion/services/en
 
 const NAV_ITEMS = [
   { label: 'Solicitudes', icon: ClipboardList, path: '/privado/solicitudes', badge: true },
-  { label: 'Opiniones', icon: MessageSquareWarning, path: '/privado/opiniones' },
-  { label: 'Comentarios', icon: MessageSquare, path: '/privado/comentarios' },
-  { label: 'Noticias', icon: Newspaper, path: '/privado/noticias' },
-  { label: 'Crear Noticia', icon: PlusSquare, path: '/privado/crear-noticia' },
   { label: 'Actividades', icon: Activity, path: '/privado/actividades' },
   { label: 'Cuentas del Sistema', icon: Users, path: '/privado/cuentas' },
   { label: 'Niveles', icon: School, path: '/privado/niveles' },
@@ -36,6 +34,13 @@ const NAV_ITEMS = [
   { label: 'Materias', icon: BookOpen, path: '/privado/materias' },
   { label: 'Docentes', icon: UserRound, path: '/privado/docentes' },
   { label: 'Alumnos', icon: Users, path: '/privado/alumnos' },
+];
+
+const COMMUNITY_ITEMS = [
+  { label: 'Opiniones', icon: MessageSquareWarning, path: '/privado/opiniones' },
+  { label: 'Comentarios', icon: MessageSquare, path: '/privado/comentarios' },
+  { label: 'Noticias', icon: Newspaper, path: '/privado/noticias' },
+  { label: 'Crear Noticia', icon: PlusSquare, path: '/privado/crear-noticia' },
 ];
 
 function getInitials(name: string): string {
@@ -53,6 +58,7 @@ export const AdminLayout: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [session, setSession] = useState<AuthSession | null>(null);
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [isCommunityOpen, setIsCommunityOpen] = useState(false);
 
   useEffect(() => {
     void getSupabaseAdminSession().then(setSession);
@@ -85,6 +91,9 @@ export const AdminLayout: React.FC = () => {
     if (path === '/privado/solicitudes') return location.pathname === path;
     return location.pathname.startsWith(path);
   };
+
+  const isCommunityActive = COMMUNITY_ITEMS.some((item) => isActive(item.path));
+  const isCommunityExpanded = isCommunityOpen || isCommunityActive;
 
   const getPageTitle = () => {
     if (location.pathname === '/privado/solicitudes') return 'Solicitudes de Inscripción';
@@ -148,6 +157,47 @@ export const AdminLayout: React.FC = () => {
               </React.Fragment>
             );
           })}
+          <div className="mt-2 border-t border-white/10 pt-2">
+            <button
+              type="button"
+              aria-expanded={isCommunityExpanded}
+              aria-controls="admin-community-menu"
+              onClick={() => setIsCommunityOpen((current) => !current)}
+              className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all duration-200 ${
+                isCommunityActive
+                  ? 'bg-white/10 text-white shadow-lg shadow-black/5'
+                  : 'text-white/60 hover:bg-white/5 hover:text-white/80'
+              }`}
+            >
+              <div className={`flex items-center justify-center ${isCommunityActive ? 'text-edu-accent' : 'text-white/40 group-hover:text-white/60'}`}>
+                <Users size={18} />
+              </div>
+              <span className="flex-1 text-left">Comunidad</span>
+              {isCommunityExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+            </button>
+            {isCommunityExpanded && (
+              <div id="admin-community-menu" className="mt-1 space-y-0.5 pl-3">
+                {COMMUNITY_ITEMS.map((item) => {
+                  const active = isActive(item.path);
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`group flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 ${
+                        active
+                          ? 'bg-white/10 text-white'
+                          : 'text-white/60 hover:bg-white/5 hover:text-white/80'
+                      }`}
+                    >
+                      <Icon size={16} className={active ? 'text-edu-accent' : 'text-white/40 group-hover:text-white/60'} />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </nav>
 
         <div className="border-t border-white/10 p-3">
@@ -229,6 +279,48 @@ export const AdminLayout: React.FC = () => {
                   </React.Fragment>
                 );
               })}
+              <div className="mt-2 border-t border-white/10 pt-2">
+                <button
+                  type="button"
+                  aria-expanded={isCommunityExpanded}
+                  aria-controls="admin-community-menu-mobile"
+                  onClick={() => setIsCommunityOpen((current) => !current)}
+                  className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all duration-200 ${
+                    isCommunityActive
+                      ? 'bg-white/10 text-white shadow-lg shadow-black/5'
+                      : 'text-white/60 hover:bg-white/5 hover:text-white/80'
+                  }`}
+                >
+                  <div className={`flex items-center justify-center ${isCommunityActive ? 'text-edu-accent' : 'text-white/40 group-hover:text-white/60'}`}>
+                    <Users size={18} />
+                  </div>
+                  <span className="flex-1 text-left">Comunidad</span>
+                  {isCommunityExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                </button>
+                {isCommunityExpanded && (
+                  <div id="admin-community-menu-mobile" className="mt-1 space-y-0.5 pl-3">
+                    {COMMUNITY_ITEMS.map((item) => {
+                      const active = isActive(item.path);
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={`group flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 ${
+                            active
+                              ? 'bg-white/10 text-white'
+                              : 'text-white/60 hover:bg-white/5 hover:text-white/80'
+                          }`}
+                        >
+                          <Icon size={16} className={active ? 'text-edu-accent' : 'text-white/40 group-hover:text-white/60'} />
+                          <span>{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </nav>
 
             <div className="border-t border-white/10 p-3">
