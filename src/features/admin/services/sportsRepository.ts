@@ -52,7 +52,7 @@ export async function createSport(input: Pick<Sport, 'code' | 'name'>): Promise<
   if (error) throw repositoryError(error.message);
 }
 
-export async function updateSport(id: string, input: Pick<Sport, 'is_active'>): Promise<void> {
+export async function updateSport(id: string, input: Partial<Pick<Sport, 'code' | 'name' | 'is_active'>>): Promise<void> {
   const { error } = await requireSupabase().from('sports').update(input).eq('id', id);
   if (error) throw repositoryError(error.message);
 }
@@ -62,7 +62,7 @@ export async function createSportGroup(input: Pick<SportGroup, 'sport_id' | 'nam
   if (error) throw repositoryError(error.message);
 }
 
-export async function updateSportGroup(id: string, input: Partial<Pick<SportGroup, 'name' | 'educational_level_id' | 'teacher_id' | 'capacity' | 'is_active'>>): Promise<void> {
+export async function updateSportGroup(id: string, input: Partial<Pick<SportGroup, 'name' | 'educational_level_id' | 'teacher_id' | 'academic_year' | 'capacity' | 'is_active'>>): Promise<void> {
   const { error } = await requireSupabase().from('sport_groups').update(input).eq('id', id);
   if (error) throw repositoryError(error.message);
 }

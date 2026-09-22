@@ -28,4 +28,5 @@ dist-ssr
 .env.*
 !.env.example
 tmp/
+.codebase-memory/
 github-recovery-codes.txt

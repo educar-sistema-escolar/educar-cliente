@@ -38,7 +38,7 @@ export async function createDiningService(input: Pick<DiningService, 'code' | 'n
   if (error) throw repositoryError(error.message);
 }
 
-export async function updateDiningService(id: string, input: Pick<DiningService, 'is_active'>): Promise<void> {
+export async function updateDiningService(id: string, input: Partial<Pick<DiningService, 'code' | 'name' | 'capacity' | 'is_active'>>): Promise<void> {
   const { error } = await requireSupabase().from('dining_services').update(input).eq('id', id);
   if (error) throw repositoryError(error.message);
 }

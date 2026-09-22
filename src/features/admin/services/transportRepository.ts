@@ -33,7 +33,7 @@ export async function createTransportRoute(input: Pick<TransportRoute, 'route_nu
   if (error) throw repositoryError(error.message);
 }
 
-export async function updateTransportRoute(id: string, input: Pick<TransportRoute, 'is_active'>): Promise<void> {
+export async function updateTransportRoute(id: string, input: Partial<Pick<TransportRoute, 'route_number' | 'name' | 'capacity' | 'is_active'>>): Promise<void> {
   const { error } = await requireSupabase().from('transport_routes').update(input).eq('id', id);
   if (error) throw repositoryError(error.message);
 }

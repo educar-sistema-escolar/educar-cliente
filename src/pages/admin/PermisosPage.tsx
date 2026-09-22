@@ -13,6 +13,29 @@ function getErrorMessage(error: unknown, fallback: string) {
   return toUserFacingError(error, fallback);
 }
 
+const permissionLabels: Record<string, string> = {
+  'identity:read:self': 'Consultar perfil propio',
+  'identity:manage': 'Administrar accesos',
+  'student:read:self': 'Consultar datos propios',
+  'student:read:children': 'Consultar alumnos vinculados',
+  'student:read:assigned': 'Consultar alumnos asignados',
+  'guardian:link:manage': 'Administrar vínculos familiares',
+  'permissions:manage': 'Administrar permisos',
+  'reports:read': 'Consultar reportes',
+  'academic:manage': 'Administrar información académica',
+  'services:manage': 'Administrar servicios institucionales',
+  'accounts:manage': 'Administrar cuentas y vínculos',
+};
+
+const roleLabels: Record<string, string> = {
+  superadmin: 'Superadministrador',
+  admin: 'Administrador',
+  teacher: 'Docente',
+  student: 'Alumno',
+  guardian: 'Adulto responsable',
+  parent: 'Familia',
+};
+
 export const PermisosPage: React.FC = () => {
   const [permissions, setPermissions] = useState<PermissionCatalogItem[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
@@ -86,7 +109,7 @@ export const PermisosPage: React.FC = () => {
               disabled={isLoading || roles.length === 0}
               className="mt-1 block min-w-48 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-normal normal-case tracking-normal"
             >
-              {roles.map((role) => <option key={role} value={role}>{role}</option>)}
+              {roles.map((role) => <option key={role} value={role}>{roleLabels[role] ?? 'Rol institucional'}</option>)}
             </select>
           </label>
         </div>
@@ -116,8 +139,8 @@ export const PermisosPage: React.FC = () => {
                 const isUpdating = updatingCode === permission.code;
                 return (
                   <tr key={permission.code} className="hover:bg-slate-50/70">
-                    <th scope="row" className="px-5 py-3.5 font-semibold text-slate-800">{permission.code}</th>
-                    <td className="px-5 py-3.5">{permission.description}</td>
+                    <th scope="row" className="px-5 py-3.5 font-semibold text-slate-800">{permissionLabels[permission.code] ?? 'Permiso institucional'}</th>
+                    <td className="px-5 py-3.5">{permissionLabels[permission.code] ?? 'Permiso configurado para este rol.'}</td>
                     <td className="px-5 py-3.5"><span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${permission.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{permission.is_active ? 'Activo' : 'Inactivo'}</span></td>
                     <td className="px-5 py-3.5 text-right">
                       <label className="inline-flex items-center gap-2 font-semibold text-slate-700">

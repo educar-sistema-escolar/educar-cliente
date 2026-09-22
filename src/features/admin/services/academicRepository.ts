@@ -350,6 +350,21 @@ export async function createCourseSubject(input: {
   return normalizeCourseSubject(data as CourseSubjectRow);
 }
 
+export async function updateCourseSubject(
+  id: string,
+  input: Partial<Pick<CourseSubject, 'teacher_id' | 'academic_year' | 'is_active'>>,
+): Promise<CourseSubject> {
+  const { data, error } = await requireSupabase()
+    .from('course_subjects')
+    .update(input)
+    .eq('id', id)
+    .select(courseSubjectSelect)
+    .single();
+
+  if (error) throw repositoryError(error.message);
+  return normalizeCourseSubject(data as CourseSubjectRow);
+}
+
 const subjectEnrollmentSelect = `id, student_id, course_subject_id, academic_year, is_active, enrolled_at, student:students(id, student_number, person:people!inner(first_name, last_name)), course_subject:course_subjects(id, course_id, subject_id, teacher_id, academic_year, is_active, subject:subjects(id, code, name, is_active), course:courses(id, name, academic_year))`;
 
 export async function listStudentSubjectEnrollments(): Promise<StudentSubjectEnrollment[]> {
@@ -376,6 +391,28 @@ export async function enrollStudentInSubject(studentId: string, courseSubjectId:
   return rpcResult<StudentSubjectEnrollment>(data);
 }
 
+export async function updateStudentSubjectEnrollment(
+  id: string,
+  input: Partial<Pick<StudentSubjectEnrollment, 'is_active'>>,
+): Promise<StudentSubjectEnrollment> {
+  const { data, error } = await requireSupabase()
+    .from('student_subject_enrollments')
+    .update(input)
+    .eq('id', id)
+    .select(subjectEnrollmentSelect)
+    .single();
+
+  if (error) throw repositoryError(error.message);
+  const row = data as unknown as StudentSubjectEnrollment & { student?: Array<StudentSubjectEnrollment['student']>; course_subject?: Array<StudentSubjectEnrollment['course_subject']> };
+  const student = row.student?.[0];
+  const courseSubject = row.course_subject?.[0];
+  return {
+    ...row,
+    student: student ? { ...student, person: one(student.person as unknown as Array<typeof student.person>) as NonNullable<typeof student.person> } : null,
+    course_subject: courseSubject ? { ...courseSubject, subject: one(courseSubject.subject as unknown as Array<typeof courseSubject.subject>), course: one(courseSubject.course as unknown as Array<typeof courseSubject.course>) } : null,
+  } as StudentSubjectEnrollment;
+}
+
 export async function listAcademicHistory(enrollmentId: string): Promise<AcademicHistory[]> {
   const { data, error } = await requireSupabase()
     .from('academic_history')
@@ -400,6 +437,21 @@ export async function recordAcademicHistory(input: {
   });
   if (error) throw repositoryError(error.message);
   return rpcResult<AcademicHistory>(data);
+}
+
+export async function updateAcademicHistory(
+  id: string,
+  input: Pick<AcademicHistory, 'term' | 'grade' | 'notes'>,
+): Promise<AcademicHistory> {
+  const { data, error } = await requireSupabase()
+    .from('academic_history')
+    .update({ term: input.term, grade: input.grade, notes: input.notes })
+    .eq('id', id)
+    .select('id, student_subject_enrollment_id, term, grade, notes, created_at')
+    .single();
+
+  if (error) throw repositoryError(error.message);
+  return data as AcademicHistory;
 }
 
 const scheduleSelect = 'id, course_id, course_subject_id, academic_year, day_of_week, starts_at, ends_at, is_active, course:courses(id, name), course_subject:course_subjects(id, subject:subjects(name))';

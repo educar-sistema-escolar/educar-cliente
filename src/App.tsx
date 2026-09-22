@@ -130,6 +130,7 @@ function App() {
           <Route path="crear-noticia" element={<CrearNoticiaPage />} />
           <Route path="editar-noticia/:id" element={<CrearNoticiaPage />} />
           <Route path="cuentas" element={<CuentasDelSistemaPage />} />
+          <Route path="crear-usuario" element={<Navigate to="../cuentas" replace />} />
           <Route path="permisos" element={<PermisosPage />} />
           <Route path="registros-academicos" element={<AcademicRecordsPage />} />
           <Route path="servicios" element={<ServiciosPage />} />
