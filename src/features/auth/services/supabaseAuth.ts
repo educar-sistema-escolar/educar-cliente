@@ -66,6 +66,18 @@ export async function signOutSupabase() {
   if (supabase) await supabase.auth.signOut();
 }
 
+export async function requestPasswordReset(email: string): Promise<void> {
+  const { error } = await requireSupabase().auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: `${window.location.origin}/login?mode=reset`,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function updateSupabasePassword(password: string): Promise<void> {
+  const { error } = await requireSupabase().auth.updateUser({ password });
+  if (error) throw new Error(error.message);
+}
+
 export function subscribeToSupabaseAuth(callback: () => void) {
   if (!supabase) return () => undefined;
   const { data } = supabase.auth.onAuthStateChange(() => callback());

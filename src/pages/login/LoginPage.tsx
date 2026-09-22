@@ -13,28 +13,31 @@ import {
   Users,
   LogIn,
 } from 'lucide-react';
-import { getSupabaseAdminSession, loginSuperadmin } from '../../features/auth/services/supabaseAuth';
+import { getSupabaseAdminSession, loginSuperadmin, requestPasswordReset, updateSupabasePassword } from '../../features/auth/services/supabaseAuth';
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [mode, setMode] = useState<'login' | 'request' | 'reset'>(() => new URLSearchParams(window.location.search).get('mode') === 'reset' ? 'reset' : 'login');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (mode === 'reset') return;
     void getSupabaseAdminSession().then((session) => {
       if (session) navigate('/privado', { replace: true });
     });
-  }, [navigate]);
+  }, [mode, navigate]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
-    if (!email || !password) {
-      setError('Ingresa correo y contraseña para continuar.');
+    if (!email || (mode === 'login' && !password) || (mode === 'reset' && (!password || !confirmPassword))) {
+      setError(mode === 'request' ? 'Ingresa tu correo institucional.' : 'Completa los campos requeridos.');
       return;
     }
 
@@ -43,6 +46,21 @@ const LoginForm: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      if (mode === 'request') {
+        await requestPasswordReset(email);
+        setSuccessMessage('Si la cuenta existe, recibirás un enlace para recuperar el acceso.');
+        return;
+      }
+      if (mode === 'reset') {
+        if (password.length < 8 || password !== confirmPassword) {
+          setError('La contraseña debe tener al menos 8 caracteres y coincidir con su confirmación.');
+          return;
+        }
+        await updateSupabasePassword(password);
+        setMode('login'); setPassword(''); setConfirmPassword('');
+        setSuccessMessage('Contraseña actualizada. Ya podés iniciar sesión.');
+        return;
+      }
       await loginSuperadmin(email, password);
       setSuccessMessage('Acceso validado. Redirigiendo al espacio correspondiente...');
 
@@ -233,7 +251,7 @@ const LoginForm: React.FC = () => {
                 </div>
 
                 {/* Password Input */}
-                <div className="space-y-2">
+                {mode !== 'request' && <div className="space-y-2">
                   <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
                     CONTRASEÑA
                   </label>
@@ -261,20 +279,19 @@ const LoginForm: React.FC = () => {
                     </button>
                   </div>
                   <div className="flex justify-end pt-1">
-                    <Link
+                    {mode === 'login' && <Link
                       to="#"
                       onClick={(e) => {
                         e.preventDefault();
-                        setError(
-                          'Para recuperar tu contraseña, comunícate con la secretaría o el soporte técnico de la institución.'
-                        );
+                        setError(null); setSuccessMessage(null); setMode('request');
                       }}
                       className="text-xs font-semibold text-edu-primary hover:text-edu-secondary-dark hover:underline transition-all duration-200"
                     >
                       ¿Olvidaste tu contraseña?
-                    </Link>
+                    </Link>}
+                  {mode === 'reset' && <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirmá la nueva contraseña" className="mt-2 h-12 w-full rounded-xl border border-slate-200 px-4 text-[14.5px] outline-none focus:border-edu-primary" disabled={isSubmitting} required />}
                   </div>
-                </div>
+                </div>}
 
                 {/* Submit Button */}
                 <button
@@ -309,13 +326,14 @@ const LoginForm: React.FC = () => {
                     <>
                       <div className="flex items-center gap-2">
                         <LogIn className="h-4 w-4" />
-                        <span>Iniciar sesión</span>
+                        <span>{mode === 'request' ? 'Enviar enlace' : mode === 'reset' ? 'Actualizar contraseña' : 'Iniciar sesión'}</span>
                       </div>
                       <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4" />
                     </>
                   )}
                 </button>
               </form>
+              {mode === 'request' && <button type="button" className="text-xs font-semibold text-edu-primary hover:underline" onClick={() => { setMode('login'); setError(null); setSuccessMessage(null); }}>Volver al inicio de sesión</button>}
             </div>
 
             {/* Card 2: Registration Card */}

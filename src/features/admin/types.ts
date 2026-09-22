@@ -130,6 +130,15 @@ export type SportGroup = {
   teacher?: Pick<Teacher, 'id'> & { person?: Pick<Person, 'first_name' | 'last_name'> | null } | null;
 };
 
+export type SportGroupSchedule = {
+  id: string;
+  sport_group_id: string;
+  day_of_week: number;
+  starts_at: string;
+  ends_at: string;
+  is_active: boolean;
+};
+
 export type StudentSportEnrollment = {
   id: string;
   student_id: string;
@@ -177,6 +186,15 @@ export type DiningService = {
   name: string;
   capacity: number;
   is_active: boolean;
+};
+
+export type DiningSlot = {
+  id: string;
+  dining_service_id: string;
+  service_date: string;
+  capacity: number;
+  is_available: boolean;
+  dining_service?: Pick<DiningService, 'id' | 'name'> | null;
 };
 
 export type StudentDiningEnrollment = {
