@@ -1,5 +1,7 @@
 export type DemoUserRole = 'superadmin' | 'student' | 'parent' | 'teacher';
 
+export type AdminAccountRole = DemoUserRole | 'guardian';
+
 export type AuthSource = 'backend' | 'local' | 'supabase';
 
 export interface AuthSession {

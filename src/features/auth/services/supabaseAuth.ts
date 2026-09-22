@@ -1,11 +1,11 @@
-import type { AuthSession, DemoUserRole } from '../types';
+import type { AdminAccountRole, AuthSession } from '../types';
 import { supabase, requireSupabase } from './supabaseClient';
 
 export interface AdminProfile {
   id: string;
   email: string;
   full_name: string;
-  role: DemoUserRole;
+  role: AdminAccountRole;
   is_active: boolean;
 }
 
