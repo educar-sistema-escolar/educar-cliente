@@ -70,7 +70,6 @@ export const AcademicMasterDataPage: React.FC<{ resource: Resource }> = ({ resou
   const [courseSubjects, setCourseSubjects] = useState<CourseSubject[]>([]);
   const [assignmentSubjectId, setAssignmentSubjectId] = useState('');
   const [assignmentTeacherId, setAssignmentTeacherId] = useState('');
-  const [assignmentYear, setAssignmentYear] = useState(String(new Date().getFullYear()));
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -204,7 +203,6 @@ export const AcademicMasterDataPage: React.FC<{ resource: Resource }> = ({ resou
     setAssignmentCourse(course);
     setAssignmentSubjectId('');
     setAssignmentTeacherId('');
-    setAssignmentYear(String(course.academic_year));
     try {
       setCourseSubjects(await listCourseSubjects(course.id));
     } catch (assignmentError) {
@@ -214,13 +212,27 @@ export const AcademicMasterDataPage: React.FC<{ resource: Resource }> = ({ resou
 
   async function assignSubject(event: React.FormEvent) {
     event.preventDefault();
-    if (!assignmentCourse || !assignmentSubjectId) return;
+    if (!assignmentCourse || !assignmentSubjectId || !assignmentTeacherId) return;
     try {
-      const assignment = await createCourseSubject({ course_id: assignmentCourse.id, subject_id: assignmentSubjectId, teacher_id: assignmentTeacherId || undefined, academic_year: Number(assignmentYear) });
+      if (courseSubjects.some((item) => item.subject_id === assignmentSubjectId && item.academic_year === assignmentCourse.academic_year && item.is_active)) {
+        throw new Error('Esa materia ya está asignada a este curso. Podés cambiar su docente en la lista.');
+      }
+      const assignment = await createCourseSubject({ course_id: assignmentCourse.id, subject_id: assignmentSubjectId, teacher_id: assignmentTeacherId, academic_year: assignmentCourse.academic_year });
       setCourseSubjects((current) => [assignment, ...current]);
       setAssignmentSubjectId('');
       setAssignmentTeacherId('');
-      setFeedback('Materia asignada al curso correctamente.');
+      setFeedback('Materia y docente asignados correctamente.');
+    } catch (assignmentError) {
+      setError(getErrorMessage(assignmentError));
+    }
+  }
+
+  async function changeAssignmentTeacher(assignment: CourseSubject, teacherId: string) {
+    if (!assignmentCourse || !teacherId || teacherId === assignment.teacher_id) return;
+    try {
+      await updateCourseSubject(assignment.id, { teacher_id: teacherId });
+      setCourseSubjects(await listCourseSubjects(assignmentCourse.id));
+      setFeedback('Docente actualizado correctamente.');
     } catch (assignmentError) {
       setError(getErrorMessage(assignmentError));
     }
@@ -290,15 +302,56 @@ export const AcademicMasterDataPage: React.FC<{ resource: Resource }> = ({ resou
 
       {enrollmentStudent && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-md space-y-4 rounded-2xl bg-white p-5 shadow-2xl"><div className="flex items-center justify-between"><h2 className="text-sm font-bold text-edu-primary">Cursos del alumno</h2><button type="button" onClick={() => setEnrollmentStudent(null)}><X size={16} /></button></div><p className="text-xs text-slate-600">Alumno: <strong>{enrollmentStudent.person.first_name} {enrollmentStudent.person.last_name}</strong></p><form onSubmit={assignCourse} className="space-y-3"><SelectField label="Curso" value={enrollmentCourseId} options={courses.filter((course) => course.is_active).map((course) => ({ value: course.id, label: `${course.name} (${course.academic_year})` }))} onChange={setEnrollmentCourseId} /><Field label="Ciclo lectivo" type="number" value={enrollmentYear} onChange={setEnrollmentYear} /><button type="submit" disabled={isSaving} className="w-full rounded-lg bg-edu-secondary py-2 text-xs font-semibold text-white disabled:opacity-50">Asignar curso</button></form><div className="space-y-2 border-t border-edu-border pt-3">{enrollmentStudent.enrollments.length === 0 ? <p className="text-xs text-edu-muted">El alumno no tiene cursos asignados.</p> : enrollmentStudent.enrollments.map((enrollment) => <div key={enrollment.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs"><span>{enrollment.course?.name ?? 'Curso'} · {enrollment.academic_year}</span>{enrollment.is_active && <button type="button" className="font-semibold text-red-600" onClick={() => void updateStudentEnrollment(enrollment.id, { is_active: false }).then(async () => { setFeedback('Asignación desactivada.'); setEnrollmentStudent(null); await load(); }).catch((enrollmentError: unknown) => setError(getErrorMessage(enrollmentError)))}>Desactivar</button>}</div>)}</div></div></div>}
 
-      {assignmentCourse && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-5 shadow-2xl"><div className="flex items-center justify-between"><h2 className="text-sm font-bold text-edu-primary">Materias de {assignmentCourse.name}</h2><button type="button" onClick={() => setAssignmentCourse(null)}><X size={16} /></button></div><form onSubmit={assignSubject} className="grid gap-3 sm:grid-cols-2"><SelectField label="Materia" value={assignmentSubjectId} options={subjects.filter((subject) => subject.is_active).map((subject) => ({ value: subject.id, label: subject.name }))} onChange={setAssignmentSubjectId} /><SelectField label="Docente" value={assignmentTeacherId} options={teachers.filter((teacher) => teacher.is_active).map((teacher) => ({ value: teacher.id, label: `${teacher.person.first_name} ${teacher.person.last_name}` }))} onChange={setAssignmentTeacherId} /><Field label="Ciclo lectivo" type="number" value={assignmentYear} onChange={setAssignmentYear} /><button type="submit" disabled={isSaving} className="self-end rounded-lg bg-edu-secondary py-2 text-xs font-semibold text-white disabled:opacity-50">Asignar materia</button></form><div className="space-y-2 border-t border-edu-border pt-3">{courseSubjects.length === 0 ? <p className="text-xs text-edu-muted">Todavía no hay materias asignadas.</p> : courseSubjects.map((assignment) => <div key={assignment.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs"><span className="font-semibold text-slate-800">{assignment.subject?.name ?? 'Materia'} · {assignment.teacher ? `${assignment.teacher.person.first_name} ${assignment.teacher.person.last_name}` : 'Sin docente'} · {assignment.academic_year}</span><button type="button" className={`font-semibold ${assignment.is_active ? 'text-red-600' : 'text-edu-secondary'}`} onClick={() => void updateCourseSubject(assignment.id, { is_active: !assignment.is_active }).then(async () => { setFeedback(`Materia ${assignment.is_active ? 'desactivada' : 'activada'}.`); setCourseSubjects(await listCourseSubjects(assignmentCourse.id)); }).catch((assignmentError) => setError(getErrorMessage(assignmentError)))}>{assignment.is_active ? 'Desactivar' : 'Activar'}</button></div>)}</div></div></div>}
+      {assignmentCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="course-assignment-title">
+          <div className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-5 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 id="course-assignment-title" className="text-sm font-bold text-edu-primary">Materias y docentes · {assignmentCourse.name}</h2>
+                <p className="mt-1 text-xs text-edu-muted">Cada materia del curso debe tener un docente responsable.</p>
+              </div>
+              <button type="button" onClick={() => setAssignmentCourse(null)} className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" aria-label="Cerrar"><X size={16} /></button>
+            </div>
+
+            <form onSubmit={assignSubject} className="grid gap-3 rounded-xl border border-edu-border/70 bg-slate-50/60 p-3 sm:grid-cols-2">
+              <SelectField label="1. Materia" value={assignmentSubjectId} options={subjects.filter((subject) => subject.is_active).map((subject) => ({ value: subject.id, label: subject.name }))} onChange={setAssignmentSubjectId} />
+              <SelectField label="2. Docente responsable" value={assignmentTeacherId} options={teachers.filter((teacher) => teacher.is_active).map((teacher) => ({ value: teacher.id, label: `${teacher.person.first_name} ${teacher.person.last_name}` }))} onChange={setAssignmentTeacherId} />
+              <p className="text-[11px] text-edu-muted sm:col-span-2">Ciclo lectivo: {assignmentCourse.academic_year}</p>
+              <button type="submit" disabled={isSaving || !assignmentSubjectId || !assignmentTeacherId} className="sm:col-span-2 rounded-lg bg-edu-secondary py-2 text-xs font-semibold text-white transition-colors hover:bg-edu-secondary-dark disabled:opacity-50">Asignar materia y docente</button>
+            </form>
+
+            <div className="space-y-2 border-t border-edu-border pt-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-edu-muted">Asignaciones actuales</p>
+              {courseSubjects.length === 0 ? <p className="text-xs text-edu-muted">Todavía no hay materias asignadas.</p> : courseSubjects.map((assignment) => (
+                <div key={assignment.id} className="flex flex-col gap-3 rounded-lg bg-slate-50 px-3 py-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-slate-800">{assignment.subject?.name ?? 'Materia'}</p>
+                    <p className="mt-1 text-edu-muted">{assignment.teacher ? `${assignment.teacher.person.first_name} ${assignment.teacher.person.last_name}` : 'Sin docente asignado'} · {assignment.academic_year}</p>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <label className="min-w-40 space-y-1">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-edu-muted">Cambiar docente</span>
+                      <select value={assignment.teacher_id ?? ''} onChange={(event) => void changeAssignmentTeacher(assignment, event.target.value)} className="h-8 w-full rounded-lg border border-edu-border bg-white px-2 text-xs outline-none transition-colors hover:border-edu-secondary focus:border-edu-secondary">
+                        <option value="">Seleccionar...</option>
+                        {teachers.filter((teacher) => teacher.is_active).map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.person.first_name} {teacher.person.last_name}</option>)}
+                      </select>
+                    </label>
+                    <button type="button" className={`rounded-lg px-2 py-1.5 font-semibold transition-colors ${assignment.is_active ? 'text-red-600 hover:bg-red-50' : 'text-edu-secondary hover:bg-sky-50'}`} onClick={() => void updateCourseSubject(assignment.id, { is_active: !assignment.is_active }).then(async () => { setFeedback(`Materia ${assignment.is_active ? 'desactivada' : 'activada'}.`); setCourseSubjects(await listCourseSubjects(assignmentCourse.id)); }).catch((assignmentError) => setError(getErrorMessage(assignmentError)))}>{assignment.is_active ? 'Desactivar' : 'Activar'}</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 function Field({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
-  return <label className="block space-y-1"><span className="text-[10px] font-bold uppercase tracking-wider text-edu-muted">{label}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="h-9 w-full rounded-lg border border-edu-border px-3 text-xs outline-none focus:border-edu-secondary" /></label>;
+  return <label className="block space-y-1"><span className="text-[10px] font-bold uppercase tracking-wider text-edu-muted">{label}</span><input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="h-9 w-full rounded-lg border border-edu-border px-3 text-xs outline-none transition-colors hover:border-edu-secondary focus:border-edu-secondary" /></label>;
 }
 
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) {
-  return <label className="block space-y-1"><span className="text-[10px] font-bold uppercase tracking-wider text-edu-muted">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="h-9 w-full rounded-lg border border-edu-border px-3 text-xs outline-none focus:border-edu-secondary"><option value="">Seleccionar...</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
+  return <label className="block space-y-1"><span className="text-[10px] font-bold uppercase tracking-wider text-edu-muted">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="h-9 w-full rounded-lg border border-edu-border px-3 text-xs outline-none transition-colors hover:border-edu-secondary focus:border-edu-secondary"><option value="">Seleccionar...</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
 }

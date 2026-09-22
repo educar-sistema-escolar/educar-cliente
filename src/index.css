@@ -38,6 +38,18 @@
   ::selection {
     @apply bg-edu-secondary/15 text-edu-primary;
   }
+
+  .fixed.inset-0 button[class*='border']:not(:disabled) {
+    @apply transition-colors hover:bg-slate-50;
+  }
+
+  .fixed.inset-0 button[class*='bg-edu-secondary']:not(:disabled) {
+    @apply transition-colors hover:bg-edu-secondary-dark;
+  }
+
+  .fixed.inset-0 :is(input, select, textarea)[class*='border'] {
+    @apply transition-colors hover:border-edu-secondary;
+  }
 }
 
 @utility scrollbar-thin {
