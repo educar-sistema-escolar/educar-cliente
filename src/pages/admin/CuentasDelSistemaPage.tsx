@@ -10,6 +10,7 @@ import {
 } from '../../features/auth/services/adminAccountsRepository';
 import { listStudents } from '../../features/admin/services/academicRepository';
 import type { Student } from '../../features/admin/types';
+import { toUserFacingError } from '../../shared/utils/userFacingError';
 
 const roleLabels: Record<AdminAccountRole, string> = {
   student: 'Alumno',
@@ -22,7 +23,7 @@ const roleLabels: Record<AdminAccountRole, string> = {
 const roleOptions = Object.entries(roleLabels) as [AdminAccountRole, string][];
 
 function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
+  return toUserFacingError(error, fallback);
 }
 
 export const CuentasDelSistemaPage: React.FC = () => {

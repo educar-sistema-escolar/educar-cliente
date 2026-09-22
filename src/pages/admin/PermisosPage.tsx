@@ -7,9 +7,10 @@ import {
   type PermissionCatalogItem,
   type RolePermission,
 } from '../../features/auth/services/adminAccountsRepository';
+import { toUserFacingError } from '../../shared/utils/userFacingError';
 
 function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
+  return toUserFacingError(error, fallback);
 }
 
 export const PermisosPage: React.FC = () => {

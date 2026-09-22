@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   BadgeCheck,
   CheckCircle2,
-  KeyRound,
   LoaderCircle,
   Search,
   Sparkles,
@@ -16,6 +15,7 @@ import {
   getSession,
 } from '../../features/auth/services/demoAuth';
 import { markEnrollmentAccountCreatedByDni } from '../../features/inscripcion/services/enrollmentStore';
+import { toUserFacingError } from '../../shared/utils/userFacingError';
 
 export const StudentRegistrationPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -52,12 +52,12 @@ export const StudentRegistrationPage: React.FC = () => {
 
   async function handleCreateAccount() {
     if (!student) {
-      setError('El DNI ingresado no pertenece a un alumno habilitado para esta demo.');
+      setError('El DNI ingresado no pertenece a un alumno habilitado.');
       return;
     }
 
     if (student.hasAccount) {
-      setError('Este alumno ya tiene cuenta registrada en la demo.');
+      setError('Este alumno ya tiene una cuenta registrada.');
       return;
     }
 
@@ -77,13 +77,13 @@ export const StudentRegistrationPage: React.FC = () => {
       markEnrollmentAccountCreatedByDni(student.dni);
       setAccountVersion((current) => current + 1);
       setSuccessMessage(
-        'Cuenta creada con éxito. El alumno ya puede iniciar sesión con juan@educar.com y la contraseña programacion2026.',
+        'Cuenta creada correctamente. El alumno recibirá instrucciones para iniciar sesión.',
       );
       setSearchedDni(student.dni);
     } catch (creationError) {
       setError(
         creationError instanceof Error
-          ? creationError.message
+          ? toUserFacingError(creationError, 'No se pudo crear la cuenta del alumno.')
           : 'No se pudo crear la cuenta del alumno.',
       );
     } finally {
@@ -103,7 +103,7 @@ export const StudentRegistrationPage: React.FC = () => {
             Desde el padrón institucional
           </h1>
           <p className="text-xs leading-relaxed text-edu-muted">
-            Validá el DNI en el padrón y creá la cuenta. Las credenciales quedan listas para el login.
+            Validá el DNI en el padrón y creá la cuenta. El acceso se habilitará de forma segura.
           </p>
         </div>
       </section>
@@ -162,10 +162,10 @@ export const StudentRegistrationPage: React.FC = () => {
                 <BadgeCheck className="h-6 w-6 text-edu-secondary/60" />
               </div>
               <p className="mt-3 text-sm font-bold text-slate-700">
-                No encontramos el DNI en el padrón demo.
+                No encontramos el DNI en el padrón institucional.
               </p>
               <p className="mt-1.5 max-w-sm text-xs text-edu-muted">
-                Probá con: <strong className="text-slate-700">46463269</strong>
+                Revisá el número ingresado e intentá nuevamente.
               </p>
             </div>
           ) : (
@@ -205,15 +205,8 @@ export const StudentRegistrationPage: React.FC = () => {
                 </div>
               </dl>
 
-              <div className="rounded-xl border border-edu-border bg-gradient-to-br from-edu-secondary/[0.02] to-white p-3.5">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-edu-muted">Credenciales</p>
-                <div className="mt-2 flex items-start gap-2.5">
-                  <KeyRound className="mt-0.5 h-4 w-4 text-edu-secondary" />
-                  <div className="space-y-1 text-xs text-slate-600">
-                    <p><strong className="text-slate-800">Correo:</strong> {student.email}</p>
-                    <p><strong className="text-slate-800">Contraseña:</strong> programacion2026</p>
-                  </div>
-                </div>
+              <div className="rounded-xl border border-edu-border bg-gradient-to-br from-edu-secondary/[0.02] to-white p-3.5 text-xs text-slate-600">
+                El acceso se comunica al usuario por el canal institucional correspondiente.
               </div>
 
               <button

@@ -14,10 +14,11 @@ import {
   updateAcademicSchedule,
 } from '../../features/admin/services/academicRepository';
 import type { AcademicHistory, AcademicSchedule, Course, CourseSubject, Student, StudentSubjectEnrollment } from '../../features/admin/types';
+import { toUserFacingError } from '../../shared/utils/userFacingError';
 
 const field = 'mt-1 h-9 w-full rounded-lg border border-edu-border bg-white px-2.5 text-xs outline-none focus:border-edu-secondary';
 const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const message = (error: unknown) => error instanceof Error ? error.message : 'No se pudo completar la operación.';
+const message = (error: unknown) => toUserFacingError(error, 'No se pudo completar la operación.');
 
 export function AcademicRecordsPage() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -81,7 +82,7 @@ export function AcademicRecordsPage() {
   const editSchedule = (schedule: AcademicSchedule) => setScheduleForm({ course: schedule.course_id, subject: schedule.course_subject_id ?? '', year: String(schedule.academic_year), day: String(schedule.day_of_week), start: schedule.starts_at.slice(0, 5), end: schedule.ends_at.slice(0, 5) });
 
   return <div className="space-y-5">
-    <section className="rounded-2xl border border-edu-border/60 bg-white p-5 shadow-sm"><span className="text-[10px] font-bold uppercase tracking-wider text-edu-secondary">Superadmin</span><h1 className="mt-1 text-lg font-bold text-edu-primary">Registros académicos</h1><p className="mt-1 text-xs text-edu-muted">Inscripciones por materia, historial de calificaciones y horarios.</p><p className="mt-2 text-[11px] text-amber-700">La disponibilidad final depende de que la migración de Work Unit A esté aplicada en Supabase.</p></section>
+    <section className="rounded-2xl border border-edu-border/60 bg-white p-5 shadow-sm"><span className="text-[10px] font-bold uppercase tracking-wider text-edu-secondary">Superadmin</span><h1 className="mt-1 text-lg font-bold text-edu-primary">Registros académicos</h1><p className="mt-1 text-xs text-edu-muted">Inscripciones por materia, historial de calificaciones y horarios.</p></section>
     {error && <div className="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-700"><AlertTriangle size={15} />{error}<button className="ml-auto font-bold underline" onClick={() => void load()}>Reintentar</button></div>}
     {success && <div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs text-emerald-700"><CheckCircle2 size={15} />{success}</div>}
     {loading ? <div className="flex min-h-64 items-center justify-center gap-2 text-sm text-edu-muted"><RefreshCw className="animate-spin" size={16} />Cargando registros...</div> : <>

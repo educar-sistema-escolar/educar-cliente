@@ -14,12 +14,13 @@ import {
 } from '../../features/admin/services/servicesRepository';
 import { listEducationalLevels, listStudents, listTeachers } from '../../features/admin/services/academicRepository';
 import type { DiningService, DiningSlot, DiningUsage, EducationalLevel, Sport, SportGroup, SportGroupSchedule, Student, StudentDiningEnrollment, StudentSportEnrollment, StudentTransportEnrollment, Teacher, TransportRoute } from '../../features/admin/types';
+import { toUserFacingError } from '../../shared/utils/userFacingError';
 import { DiningServicesPage } from './services/DiningServicesPage';
 import { SportsServicesPage } from './services/SportsServicesPage';
 import { TransportServicesPage } from './services/TransportServicesPage';
 
 type Tab = 'sports' | 'transport' | 'dining';
-const errorText = (error: unknown) => error instanceof Error ? error.message : 'No se pudo completar la operación.';
+const errorText = (error: unknown) => toUserFacingError(error, 'No se pudo completar la operación.');
 
 export function ServiciosPage() {
   const [tab, setTab] = useState<Tab>('sports');
@@ -68,7 +69,7 @@ export function ServiciosPage() {
   if (loading) return <div className="flex min-h-64 items-center justify-center gap-2 text-sm text-edu-muted"><RefreshCw className="animate-spin" size={16} />Cargando servicios...</div>;
 
   return <div className="space-y-5">
-    <section className="rounded-2xl border border-edu-border/60 bg-white p-5 shadow-sm"><span className="text-[10px] font-bold uppercase tracking-wider text-edu-secondary">Superadmin</span><h1 className="mt-1 text-lg font-bold text-edu-primary">Servicios institucionales</h1><p className="mt-1 text-xs leading-relaxed text-edu-muted">Catálogos, inscripciones deportivas, transporte y comedor conectados a Supabase.</p></section>
+    <section className="rounded-2xl border border-edu-border/60 bg-white p-5 shadow-sm"><span className="text-[10px] font-bold uppercase tracking-wider text-edu-secondary">Superadmin</span><h1 className="mt-1 text-lg font-bold text-edu-primary">Servicios institucionales</h1><p className="mt-1 text-xs leading-relaxed text-edu-muted">Catálogos, inscripciones deportivas, transporte y comedor.</p></section>
     {(error || success) && <div role="status" aria-live="polite" className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-xs ${error ? 'border-red-100 bg-red-50 text-red-700' : 'border-emerald-100 bg-emerald-50 text-emerald-700'}`}><span>{error ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}</span><span>{error || success}</span>{error && <button className="ml-auto font-bold underline" onClick={() => void load()}>Reintentar</button>}</div>}
     <div className="flex flex-wrap gap-2" role="tablist" aria-label="Servicios">{([['sports', 'Deportes'], ['transport', 'Transporte'], ['dining', 'Comedor']] as const).map(([value, label]) => <button key={value} role="tab" aria-selected={tab === value} type="button" onClick={() => { setTab(value); setError(null); }} className={`rounded-xl px-4 py-2 text-xs font-bold ${tab === value ? 'bg-edu-primary text-white' : 'border border-edu-border bg-white text-edu-muted'}`}>{label}</button>)}</div>
     <div hidden={tab !== 'sports'}><SportsServicesPage students={students} sports={sports} sportGroups={sportGroups} sportSchedules={sportSchedules} teachers={teachers} levels={levels} sportEnrollments={sportEnrollments} saving={saving} save={save} setError={setError} /></div>

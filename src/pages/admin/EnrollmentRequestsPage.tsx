@@ -24,6 +24,7 @@ import {
   rejectEnrollmentRequest,
 } from '../../features/inscripcion/services/enrollmentStore';
 import type { EnrollmentRequest, EnrollmentStatus } from '../../features/inscripcion/types';
+import { toUserFacingError } from '../../shared/utils/userFacingError';
 
 const statusLabels: Record<EnrollmentStatus, string> = {
   pending: 'Nueva solicitud',
@@ -87,7 +88,7 @@ export const EnrollmentRequestsPage: React.FC = () => {
       setRequests(nextRequests);
       setCourses(nextCourses);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar las solicitudes.');
+      setError(toUserFacingError(loadError, 'No se pudieron cargar las solicitudes.'));
     } finally {
       setLoading(false);
     }
@@ -102,7 +103,7 @@ export const EnrollmentRequestsPage: React.FC = () => {
         setCourses(nextCourses);
       })
       .catch((loadError) => {
-        if (mounted) setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar las solicitudes.');
+        if (mounted) setError(toUserFacingError(loadError, 'No se pudieron cargar las solicitudes.'));
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -145,7 +146,7 @@ export const EnrollmentRequestsPage: React.FC = () => {
       await loadData();
       setFeedback(message);
     } catch (mutationError) {
-      setError(mutationError instanceof Error ? mutationError.message : 'No se pudo actualizar la solicitud.');
+      setError(toUserFacingError(mutationError, 'No se pudo actualizar la solicitud.'));
     } finally {
       setActionId(null);
     }
@@ -186,7 +187,7 @@ export const EnrollmentRequestsPage: React.FC = () => {
               <ClipboardList className="h-3.5 w-3.5" />
               Flujo de inscripción
             </span>
-            <h1 className="mt-2 text-lg font-bold text-edu-primary">Solicitudes persistidas en Supabase</h1>
+            <h1 className="mt-2 text-lg font-bold text-edu-primary">Solicitudes de inscripción</h1>
             <p className="mt-0.5 text-xs text-edu-muted">Aprobá, rechazá o archivá solicitudes desde el flujo institucional.</p>
           </div>
           <div className="grid w-full shrink-0 gap-2 sm:grid-cols-3 lg:w-auto">

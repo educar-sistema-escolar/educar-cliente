@@ -14,6 +14,7 @@ import {
   LogIn,
 } from 'lucide-react';
 import { getSupabaseAdminSession, loginSuperadmin, requestPasswordReset, updateSupabasePassword } from '../../features/auth/services/supabaseAuth';
+import { toUserFacingError } from '../../shared/utils/userFacingError';
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
@@ -68,11 +69,7 @@ const LoginForm: React.FC = () => {
         navigate('/privado', { replace: true });
       }, 700);
     } catch (loginError) {
-      setError(
-        loginError instanceof Error
-          ? loginError.message
-          : 'No se pudo iniciar sesión. Intenta nuevamente.',
-      );
+      setError(toUserFacingError(loginError, 'No se pudo iniciar sesión. Intenta nuevamente.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -174,7 +171,7 @@ const LoginForm: React.FC = () => {
               </div>
             </div>
             <p className="text-xs leading-relaxed text-edu-secondary-light/70">
-              El acceso administrativo usa Supabase Auth y valida tu perfil institucional antes de abrir el panel.
+              El acceso administrativo valida tu cuenta institucional antes de abrir el panel.
             </p>
           </div>
 

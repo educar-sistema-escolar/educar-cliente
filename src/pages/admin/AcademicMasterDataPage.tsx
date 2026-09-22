@@ -21,6 +21,7 @@ import {
   updateTeacher,
 } from '../../features/admin/services/academicRepository';
 import type { Course, CourseSubject, EducationalLevel, Student, Subject, Teacher } from '../../features/admin/types';
+import { toUserFacingError } from '../../shared/utils/userFacingError';
 
 type Resource = 'levels' | 'courses' | 'subjects' | 'teachers' | 'students';
 
@@ -43,7 +44,7 @@ const emptyForms: Record<Resource, FormState> = {
 };
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'No se pudo completar la operación.';
+  return toUserFacingError(error, 'No se pudo completar la operación.');
 }
 
 export const AcademicMasterDataPage: React.FC<{ resource: Resource }> = ({ resource }) => {
@@ -232,7 +233,7 @@ export const AcademicMasterDataPage: React.FC<{ resource: Resource }> = ({ resou
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-edu-secondary">Gestión académica</p>
             <h1 className="mt-1 text-lg font-bold text-edu-primary">{title}</h1>
-            <p className="mt-1 text-xs text-edu-muted">Datos reales administrados desde Supabase.</p>
+            <p className="mt-1 text-xs text-edu-muted">Administrá la información institucional desde un único lugar.</p>
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => void load()} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-edu-border px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
