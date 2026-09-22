@@ -27,6 +27,17 @@ export interface ProvisionedAccountResult {
   idempotent: boolean;
 }
 
+export interface PermissionCatalogItem {
+  code: string;
+  description: string;
+  is_active: boolean;
+}
+
+export interface RolePermission {
+  role_code: string;
+  permission_code: string;
+}
+
 export async function listAdminAccounts(): Promise<AdminAccount[]> {
   const { data, error } = await requireSupabase()
     .from('profiles')
@@ -76,4 +87,38 @@ export async function linkGuardianToStudent(input: {
   });
 
   if (error) throw new Error(error.message);
+}
+
+export async function listPermissionCatalog(): Promise<PermissionCatalogItem[]> {
+  const { data, error } = await requireSupabase()
+    .from('permissions')
+    .select('code,description,is_active')
+    .order('code', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PermissionCatalogItem[];
+}
+
+export async function listRolePermissions(): Promise<RolePermission[]> {
+  const { data, error } = await requireSupabase()
+    .from('role_permissions')
+    .select('role_code,permission_code')
+    .order('role_code', { ascending: true })
+    .order('permission_code', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as RolePermission[];
+}
+
+export async function setRolePermission(
+  roleCode: string,
+  permissionCode: string,
+  enabled: boolean,
+): Promise<void> {
+  const client = requireSupabase();
+  const result = enabled
+    ? await client.from('role_permissions').upsert({ role_code: roleCode, permission_code: permissionCode })
+    : await client.from('role_permissions').delete().eq('role_code', roleCode).eq('permission_code', permissionCode);
+
+  if (result.error) throw new Error(result.error.message);
 }

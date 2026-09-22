@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity,
   ArrowLeft,
   Bell,
   ClipboardList,
@@ -19,6 +18,10 @@ import {
   School,
   UserRound,
   Users,
+  ShieldCheck,
+  ClipboardPenLine,
+  Bus,
+  BarChart3,
   X,
 } from 'lucide-react';
 import { getSupabaseAdminSession, signOutSupabase } from '../../features/auth/services/supabaseAuth';
@@ -27,13 +30,16 @@ import { getEnrollmentStatusCount } from '../../features/inscripcion/services/en
 
 const NAV_ITEMS = [
   { label: 'Solicitudes', icon: ClipboardList, path: '/privado/solicitudes', badge: true },
-  { label: 'Actividades', icon: Activity, path: '/privado/actividades' },
   { label: 'Cuentas del Sistema', icon: Users, path: '/privado/cuentas' },
+  { label: 'Permisos', icon: ShieldCheck, path: '/privado/permisos' },
   { label: 'Niveles', icon: School, path: '/privado/niveles' },
   { label: 'Cursos', icon: GraduationCap, path: '/privado/cursos' },
   { label: 'Materias', icon: BookOpen, path: '/privado/materias' },
   { label: 'Docentes', icon: UserRound, path: '/privado/docentes' },
   { label: 'Alumnos', icon: Users, path: '/privado/alumnos' },
+  { label: 'Registros académicos', icon: ClipboardPenLine, path: '/privado/registros-academicos' },
+  { label: 'Servicios', icon: Bus, path: '/privado/servicios' },
+  { label: 'Reportes', icon: BarChart3, path: '/privado/reportes' },
 ];
 
 const COMMUNITY_ITEMS = [
@@ -104,7 +110,10 @@ export const AdminLayout: React.FC = () => {
     if (location.pathname.startsWith('/privado/editar-noticia')) return 'Editar Noticia';
     if (location.pathname === '/privado/crear-usuario') return 'Crear Cuenta de Alumno';
     if (location.pathname === '/privado/cuentas') return 'Cuentas del Sistema';
-    if (location.pathname === '/privado/actividades') return 'Actividades Extracurriculares';
+    if (location.pathname === '/privado/permisos') return 'Permisos por rol';
+    if (location.pathname === '/privado/registros-academicos') return 'Registros académicos';
+    if (location.pathname === '/privado/reportes') return 'Reportes administrativos';
+    if (location.pathname === '/privado/servicios') return 'Servicios institucionales';
     return 'Panel Institucional';
   };
 

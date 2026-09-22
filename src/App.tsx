@@ -11,7 +11,6 @@ import { LoginPage } from './pages/login/LoginPage';
 import { EnrollmentPage } from './pages/enrollment/EnrollmentPage';
 import { OpinionsPage } from './pages/opiniones/OpinionsPage';
 import { RegistrationPage } from './pages/registration/RegistrationPage';
-import { ActivitiesPage } from './pages/admin/ActivitiesPage';
 import { CommentsModerationPage } from './pages/admin/CommentsModerationPage';
 import { ScrollToTop } from './shared/components/ScrollToTop';
 import { AdminLayout } from './pages/admin/AdminLayout';
@@ -36,6 +35,10 @@ import {
   subscribeToSupabaseAuth,
 } from './features/auth/services/supabaseAuth';
 import { AcademicMasterDataPage } from './pages/admin/AcademicMasterDataPage';
+import { PermisosPage } from './pages/admin/PermisosPage';
+import { AcademicRecordsPage } from './pages/admin/AcademicRecordsPage';
+import { ServiciosPage } from './pages/admin/ServiciosPage';
+import { ReportsPage } from './pages/admin/ReportsPage';
 
 const PublicLayout = () => (
   <MainLayout>
@@ -127,7 +130,11 @@ function App() {
           <Route path="crear-noticia" element={<CrearNoticiaPage />} />
           <Route path="editar-noticia/:id" element={<CrearNoticiaPage />} />
           <Route path="cuentas" element={<CuentasDelSistemaPage />} />
-          <Route path="actividades" element={<ActivitiesPage />} />
+          <Route path="permisos" element={<PermisosPage />} />
+          <Route path="registros-academicos" element={<AcademicRecordsPage />} />
+          <Route path="servicios" element={<ServiciosPage />} />
+          <Route path="reportes" element={<ReportsPage />} />
+          <Route path="actividades" element={<Navigate to="servicios" replace />} />
           <Route path="comentarios" element={<CommentsModerationPage />} />
           <Route path="niveles" element={<AcademicMasterDataPage key="levels" resource="levels" />} />
           <Route path="cursos" element={<AcademicMasterDataPage key="courses" resource="courses" />} />
