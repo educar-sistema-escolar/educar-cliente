@@ -19,26 +19,22 @@ import { CrearNoticiaPage } from './pages/admin/CrearNoticiaPage';
 import { EnrollmentRequestsPage } from './pages/admin/EnrollmentRequestsPage';
 import { OpinionModerationPage } from './pages/admin/OpinionModerationPage';
 import { CuentasDelSistemaPage } from './pages/admin/CuentasDelSistemaPage';
-import { ForoLayout } from './pages/foro/ForoLayout';
-import { ForoFeedPage } from './pages/foro/ForoFeedPage';
-import { StudentActivitiesPage } from './pages/student/StudentActivitiesPage';
-import { ForoThreadPage } from './pages/foro/ForoThreadPage';
-import { ForoProfilePage } from './pages/foro/ForoProfilePage';
 import { TeacherLayout } from './pages/teacher/TeacherLayout';
 import { TeacherDashboardPage } from './pages/teacher/TeacherDashboardPage';
-import { FamilyLayout } from './pages/family/FamilyLayout';
-import { FamilyDashboardPage } from './pages/family/FamilyDashboardPage';
 import { getRoleHomePath, getSession } from './features/auth/services/demoAuth';
 import type { DemoUserRole } from './features/auth/types';
 import {
-  getSupabaseAdminSession,
+  getSupabaseAccountSession,
   subscribeToSupabaseAuth,
+  type SupabaseAccountSession,
 } from './features/auth/services/supabaseAuth';
 import { AcademicMasterDataPage } from './pages/admin/AcademicMasterDataPage';
 import { PermisosPage } from './pages/admin/PermisosPage';
 import { AcademicRecordsPage } from './pages/admin/AcademicRecordsPage';
 import { ServiciosPage } from './pages/admin/ServiciosPage';
 import { ReportsPage } from './pages/admin/ReportsPage';
+import { StudentPortalPage } from './pages/student/StudentPortalPage';
+import { StudentPortalLayout } from './pages/student/StudentPortalLayout';
 
 const PublicLayout = () => (
   <MainLayout>
@@ -69,15 +65,15 @@ const RoleProtectedRoute = ({
 const SupabaseAdminRoute = ({ children }: { children: ReactNode }) => {
   const [sessionState, setSessionState] = useState<{
     loading: boolean;
-    isAuthenticated: boolean;
-  }>({ loading: true, isAuthenticated: false });
+    session: SupabaseAccountSession | null;
+  }>({ loading: true, session: null });
 
   useEffect(() => {
     let mounted = true;
     const refresh = async () => {
-      const session = await getSupabaseAdminSession();
+      const session = await getSupabaseAccountSession();
       if (mounted) {
-        setSessionState({ loading: false, isAuthenticated: Boolean(session) });
+        setSessionState({ loading: false, session });
       }
     };
 
@@ -93,7 +89,61 @@ const SupabaseAdminRoute = ({ children }: { children: ReactNode }) => {
     return <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">Validando sesión...</div>;
   }
 
-  return sessionState.isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  if (!sessionState.session) return <Navigate to="/login" replace />;
+  if (sessionState.session.role !== 'superadmin') return <Navigate to={getRoleHomePath(sessionState.session.role)} replace />;
+  return <>{children}</>;
+};
+
+const SupabasePortalRoute = ({
+  allowedRoles,
+  children,
+}: {
+  allowedRoles: Array<SupabaseAccountSession['role']>;
+  children: ReactNode;
+}) => {
+  const [session, setSession] = useState<SupabaseAccountSession | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const refresh = async () => {
+      const account = await getSupabaseAccountSession();
+      if (mounted) {
+        setSession(account);
+        setLoading(false);
+      }
+    };
+
+    void refresh();
+    const unsubscribe = subscribeToSupabaseAuth(() => void refresh());
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  if (loading) {
+    return <div className="flex min-h-screen items-center justify-center text-sm text-slate-500" role="status">Validando sesión institucional...</div>;
+  }
+
+  if (!session) return <Navigate to="/login" replace />;
+  if (!allowedRoles.includes(session.role)) return <Navigate to={getRoleHomePath(session.role)} replace />;
+
+  return <>{children}</>;
+};
+
+const LegacyForumRedirect = () => {
+  const [session, setSession] = useState<SupabaseAccountSession | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    void getSupabaseAccountSession().then((account) => {
+      setSession(account);
+      setLoading(false);
+    });
+  }, []);
+  if (loading) return <div className="p-8 text-sm text-slate-600" role="status">Abriendo el portal institucional...</div>;
+  if (!session) return <Navigate to="/login" replace />;
+  return <Navigate to={getRoleHomePath(session.role)} replace />;
 };
 
 function App() {
@@ -144,18 +194,18 @@ function App() {
           <Route path="alumnos" element={<AcademicMasterDataPage key="students" resource="students" />} />
         </Route>
 
-        <Route
-          path="/privado/foro"
-          element={
-            <RoleProtectedRoute allowedRoles={['student', 'parent']}>
-              <ForoLayout />
-            </RoleProtectedRoute>
-          }
-        >
-          <Route index element={<ForoFeedPage />} />
-          <Route path="discusion/:id" element={<ForoThreadPage />} />
-          <Route path="perfil" element={<ForoProfilePage />} />
-          <Route path="actividades" element={<StudentActivitiesPage />} />
+        <Route path="/privado/foro/*" element={
+          <SupabasePortalRoute allowedRoles={['student', 'parent']}>
+            <LegacyForumRedirect />
+          </SupabasePortalRoute>
+        } />
+
+        <Route path="/alumnos" element={
+          <SupabasePortalRoute allowedRoles={['student']}>
+            <StudentPortalLayout audience="student" />
+          </SupabasePortalRoute>
+        }>
+          <Route index element={<StudentPortalPage audience="student" />} />
         </Route>
 
         <Route
@@ -169,15 +219,12 @@ function App() {
           <Route index element={<TeacherDashboardPage />} />
         </Route>
 
-        <Route
-          path="/familias"
-          element={
-            <RoleProtectedRoute allowedRoles={['parent']}>
-              <FamilyLayout />
-            </RoleProtectedRoute>
-          }
-        >
-          <Route index element={<FamilyDashboardPage />} />
+        <Route path="/familias" element={
+          <SupabasePortalRoute allowedRoles={['parent']}>
+            <StudentPortalLayout audience="family" />
+          </SupabasePortalRoute>
+        }>
+          <Route index element={<StudentPortalPage audience="family" />} />
         </Route>
       </Routes>
     </Router>

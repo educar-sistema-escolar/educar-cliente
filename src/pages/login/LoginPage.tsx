@@ -13,7 +13,8 @@ import {
   Users,
   LogIn,
 } from 'lucide-react';
-import { getSupabaseAdminSession, loginSuperadmin, requestPasswordReset, updateSupabasePassword } from '../../features/auth/services/supabaseAuth';
+import { getRoleHomePath } from '../../features/auth/services/demoAuth';
+import { getSupabaseAccountSession, loginInstitutionalUser, requestPasswordReset, updateSupabasePassword } from '../../features/auth/services/supabaseAuth';
 import { toUserFacingError } from '../../shared/utils/userFacingError';
 
 const LoginForm: React.FC = () => {
@@ -29,8 +30,8 @@ const LoginForm: React.FC = () => {
 
   useEffect(() => {
     if (mode === 'reset') return;
-    void getSupabaseAdminSession().then((session) => {
-      if (session) navigate('/privado', { replace: true });
+    void getSupabaseAccountSession().then((session) => {
+      if (session) navigate(getRoleHomePath(session.role), { replace: true });
     });
   }, [mode, navigate]);
 
@@ -62,12 +63,9 @@ const LoginForm: React.FC = () => {
         setSuccessMessage('Contraseña actualizada. Ya podés iniciar sesión.');
         return;
       }
-      await loginSuperadmin(email, password);
+      const session = await loginInstitutionalUser(email, password);
       setSuccessMessage('Acceso validado. Redirigiendo al espacio correspondiente...');
-
-      window.setTimeout(() => {
-        navigate('/privado', { replace: true });
-      }, 700);
+      navigate(getRoleHomePath(session.role), { replace: true });
     } catch (loginError) {
       setError(toUserFacingError(loginError, 'No se pudo iniciar sesión. Intenta nuevamente.'));
     } finally {
@@ -167,11 +165,11 @@ const LoginForm: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-[14.5px] font-bold text-white leading-snug">Gestión Académica Integral</h3>
-                <p className="text-[11px] text-edu-secondary-light/80 mt-0.5">Acceso administrativo para superadministradores</p>
+                <p className="text-[11px] text-edu-secondary-light/80 mt-0.5">Acceso institucional con identidad verificada</p>
               </div>
             </div>
             <p className="text-xs leading-relaxed text-edu-secondary-light/70">
-              El acceso administrativo valida tu cuenta institucional antes de abrir el panel.
+              El portal consulta tu perfil institucional y limita cada espacio a los permisos de tu cuenta.
             </p>
           </div>
 
@@ -207,21 +205,21 @@ const LoginForm: React.FC = () => {
                     Ingresar al portal
                   </h2>
                   <p className="text-xs leading-relaxed text-slate-500">
-                    Ingresá con una cuenta institucional activa cuyo perfil tenga el rol superadmin.
+                    Ingresá con la cuenta institucional activa que te asignó la escuela.
                   </p>
                 </div>
               </div>
 
               {/* Error and Success Alerts */}
               {error && (
-                <div className="flex items-start gap-2 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 animate-in fade-in duration-200">
+                <div role="alert" className="flex items-start gap-2 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 animate-in fade-in duration-200">
                   <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
 
               {successMessage && (
-                <div className="flex items-start gap-2 rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700 animate-in fade-in duration-200">
+                <div role="status" className="flex items-start gap-2 rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700 animate-in fade-in duration-200">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{successMessage}</span>
                 </div>
@@ -230,12 +228,13 @@ const LoginForm: React.FC = () => {
               <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Email Input */}
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+                  <label htmlFor="login-email" className="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
                     CORREO ELECTRÓNICO
                   </label>
                   <div className="relative">
                     <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <input
+                      id="login-email"
                       type="email"
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
@@ -249,12 +248,13 @@ const LoginForm: React.FC = () => {
 
                 {/* Password Input */}
                 {mode !== 'request' && <div className="space-y-2">
-                  <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+                  <label htmlFor="login-password" className="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
                     CONTRASEÑA
                   </label>
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <input
+                      id="login-password"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
@@ -267,6 +267,7 @@ const LoginForm: React.FC = () => {
                       type="button"
                       onClick={() => setShowPassword((current) => !current)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                     >
                       {showPassword ? (
                         <EyeOff className="h-4.5 w-4.5" />
@@ -341,18 +342,18 @@ const LoginForm: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <p className="text-[14.5px] font-extrabold text-slate-800">
-                    ¿Aún no tienes cuenta?
+                    ¿Necesitás acceso al portal?
                   </p>
                   <p className="text-xs text-slate-500 leading-normal">
-                    Si tu DNI ya existe en la institución, regístrate para ingresar.
+                    Alumnos y familias ingresan con credenciales vinculadas por administración. Para un nuevo ingreso, enviá una solicitud de inscripción.
                   </p>
                 </div>
               </div>
               <Link
-                to="/registro"
+                to="/inscripcion"
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-edu-primary px-4 text-xs font-bold text-edu-primary hover:bg-edu-secondary/10 transition-all duration-200 shrink-0 cursor-pointer"
               >
-                <span>Registro al sistema</span>
+                <span>Solicitar inscripción</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>

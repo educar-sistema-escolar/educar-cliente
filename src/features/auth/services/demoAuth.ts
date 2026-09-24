@@ -588,10 +588,10 @@ export function getRoleHomePath(role: DemoUserRole) {
     case 'teacher':
       return '/docentes';
     case 'parent':
-      return '/privado/foro';
+      return '/familias';
     case 'student':
     default:
-      return '/privado/foro';
+      return '/alumnos';
   }
 }
 
@@ -616,9 +616,9 @@ export function getRoleAreaLabel(role: DemoUserRole) {
     case 'teacher':
       return 'Portal docente';
     case 'parent':
-      return 'Foro familiar';
+      return 'Portal familias';
     case 'student':
     default:
-      return 'Ir al foro';
+      return 'Portal de alumnos';
   }
 }

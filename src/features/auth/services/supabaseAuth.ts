@@ -1,65 +1,79 @@
-import type { AdminAccountRole, AuthSession } from '../types';
+import type { AuthSession } from '../types';
 import { supabase, requireSupabase } from './supabaseClient';
 
-export interface AdminProfile {
+export interface SupabaseAccountSession extends AuthSession {
+  profileId: string;
+  profileRole: string;
+}
+
+interface AuthenticatedProfile {
   id: string;
   email: string;
   full_name: string;
-  role: AdminAccountRole;
+  role: string;
   is_active: boolean;
+  account_status: string;
 }
 
-async function getAdminProfile(userId: string): Promise<AdminProfile | null> {
-  const { data, error } = await requireSupabase()
+export async function getSupabaseAccountSession(): Promise<SupabaseAccountSession | null> {
+  if (!supabase) return null;
+
+  const client = requireSupabase();
+  const { data: authData, error: authError } = await client.auth.getUser();
+  const { data: sessionData } = await client.auth.getSession();
+
+  if (authError || !authData.user || !sessionData.session) return null;
+
+  const { data, error } = await client
     .from('profiles')
-    .select('id,email,full_name,role,is_active')
-    .eq('id', userId)
+    .select('id,email,full_name,role,is_active,account_status')
+    .eq('id', authData.user.id)
     .maybeSingle();
 
   if (error || !data) return null;
-  return data as AdminProfile;
+  const profile = data as AuthenticatedProfile;
+  if (!profile.is_active || profile.account_status !== 'active') return null;
+
+  const role = profile.role === 'guardian' ? 'parent' : profile.role;
+  if (!['superadmin', 'student', 'parent'].includes(role)) return null;
+
+  return {
+    profileId: profile.id,
+    profileRole: profile.role,
+    token: sessionData.session.access_token,
+    role: role as AuthSession['role'],
+    email: profile.email || authData.user.email || '',
+    name: profile.full_name || profile.email || authData.user.email || 'Usuario',
+    authSource: 'supabase',
+  };
+}
+
+export async function loginInstitutionalUser(email: string, password: string): Promise<SupabaseAccountSession> {
+  const { error } = await requireSupabase().auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password,
+  });
+  if (error) throw new Error('No se pudo validar el acceso. Revisá tus credenciales o contactá a la institución.');
+
+  const session = await getSupabaseAccountSession();
+  if (session) return session;
+
+  await requireSupabase().auth.signOut();
+  throw new Error('La cuenta no tiene un portal institucional habilitado. Contactá a administración.');
 }
 
 export async function getSupabaseAdminSession(): Promise<AuthSession | null> {
-  if (!supabase) return null;
-
-  const { data, error } = await requireSupabase().auth.getSession();
-  if (error || !data.session) return null;
-
-  const profile = await getAdminProfile(data.session.user.id);
-  if (!profile || profile.role !== 'superadmin' || !profile.is_active) {
-    await supabase.auth.signOut();
-    return null;
-  }
-
-  return {
-    token: data.session.access_token,
-    role: 'superadmin',
-    email: profile.email || data.session.user.email || '',
-    name: profile.full_name || profile.email || data.session.user.email || 'Admin',
-    authSource: 'supabase',
-  };
+  const session = await getSupabaseAccountSession();
+  return session?.role === 'superadmin' ? session : null;
 }
 
 export async function loginSuperadmin(email: string, password: string): Promise<AuthSession> {
-  const { data, error } = await requireSupabase().auth.signInWithPassword({ email, password });
-  if (error || !data.session) {
-    throw new Error(error?.message || 'Credenciales inválidas.');
-  }
-
-  const profile = await getAdminProfile(data.session.user.id);
-  if (!profile || profile.role !== 'superadmin' || !profile.is_active) {
+  const session = await loginInstitutionalUser(email, password);
+  if (session.role !== 'superadmin') {
     await requireSupabase().auth.signOut();
     throw new Error('La cuenta no tiene acceso administrativo activo.');
   }
-
-  return {
-    token: data.session.access_token,
-    role: 'superadmin',
-    email: profile.email || email,
-    name: profile.full_name || profile.email || email,
-    authSource: 'supabase',
-  };
+  return session;
 }
 
 export async function signOutSupabase() {
@@ -80,6 +94,8 @@ export async function updateSupabasePassword(password: string): Promise<void> {
 
 export function subscribeToSupabaseAuth(callback: () => void) {
   if (!supabase) return () => undefined;
-  const { data } = supabase.auth.onAuthStateChange(() => callback());
+  const { data } = supabase.auth.onAuthStateChange(() => {
+    window.setTimeout(callback, 0);
+  });
   return () => data.subscription.unsubscribe();
 }
