@@ -1,4 +1,3 @@
-import { forumStore } from '../../comunidad/services/forumStore';
 import { getDynamicInstitutionalStudentByDni } from '../../inscripcion/services/dynamicInstitutionalStore';
 import { institutionalStudents } from '../data/institutionalStudents';
 import { localDemoAccounts } from '../data/localDemoAccounts';
@@ -138,41 +137,6 @@ function getDisplayName(email: string) {
   );
 
   return student ? `${student.firstName} ${student.lastName}` : formatNameFromEmail(email);
-}
-
-function syncForumProfile(student: InstitutionalStudent) {
-  forumStore.updateProfile({
-    name: `${student.firstName} ${student.lastName}`,
-    role: `${student.educationalLevel} • ${student.schoolYear} ${student.division}`,
-    avatar:
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200',
-    reputation: 32,
-    postsCount: 0,
-    badgesCount: 1,
-    badges: ['Nuevo'],
-  });
-}
-
-function syncReadOnlyForumProfile(email: string) {
-  const localAccount = findLocalDemoAccount(email);
-  const registeredUser = findRegisteredUserByEmail(email);
-
-  forumStore.updateProfile({
-    name: localAccount?.name ?? getDisplayName(email),
-    role:
-      registeredUser?.role === 'parent'
-        ? 'Acceso familiar • Lectura'
-        : registeredUser?.role === 'teacher'
-          ? 'Docente • Lectura'
-          : 'Comunidad educativa',
-    avatar:
-      localAccount?.avatar ??
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200',
-    reputation: 0,
-    postsCount: 0,
-    badgesCount: 1,
-    badges: ['Lector'],
-  });
 }
 
 export function getSession(): AuthSession | null {
@@ -362,14 +326,6 @@ export async function loginWithEmail(email: string, password: string) {
     const dynamicStudent = getDynamicInstitutionalStudentByDni(registeredUser.dni);
     const resolvedStudent = staticStudent ?? dynamicStudent;
 
-    if (registeredUser.role === 'student' && resolvedStudent) {
-      syncForumProfile(resolvedStudent);
-    }
-
-    if (registeredUser.role === 'parent' || registeredUser.role === 'teacher') {
-      syncReadOnlyForumProfile(normalizedEmail);
-    }
-
     const displayName = resolvedStudent
       ? `${resolvedStudent.firstName} ${resolvedStudent.lastName}`
       : getDisplayName(normalizedEmail);
@@ -415,20 +371,6 @@ export async function loginWithEmail(email: string, password: string) {
     throw new Error(
       'El usuario autentico, pero no forma parte del flujo habilitado para esta demo.',
     );
-  }
-
-  if (role === 'student') {
-    const student = institutionalStudents.find(
-      (item) => item.email.toLowerCase() === normalizedEmail,
-    );
-
-    if (student) {
-      syncForumProfile(student);
-    }
-  }
-
-  if (role === 'parent' || role === 'teacher') {
-    syncReadOnlyForumProfile(normalizedEmail);
   }
 
   const session: AuthSession = {

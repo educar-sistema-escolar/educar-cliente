@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useEffect, useState, type ReactNode } from 'react';
 import { MainLayout } from './shared/components/layout/MainLayout';
 import { HomePage } from './pages/home/HomePage';
@@ -35,6 +35,9 @@ import { ServiciosPage } from './pages/admin/ServiciosPage';
 import { ReportsPage } from './pages/admin/ReportsPage';
 import { StudentPortalPage } from './pages/student/StudentPortalPage';
 import { StudentPortalLayout } from './pages/student/StudentPortalLayout';
+import { ForoLayout } from './pages/foro/ForoLayout';
+import { ForoFeedPage } from './pages/foro/ForoFeedPage';
+import { ForoThreadPage } from './pages/foro/ForoThreadPage';
 
 const PublicLayout = () => (
   <MainLayout>
@@ -133,17 +136,26 @@ const SupabasePortalRoute = ({
 };
 
 const LegacyForumRedirect = () => {
+  const location = useLocation();
   const [session, setSession] = useState<SupabaseAccountSession | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+    let mounted = true;
     void getSupabaseAccountSession().then((account) => {
-      setSession(account);
-      setLoading(false);
+      if (mounted) {
+        setSession(account);
+        setLoading(false);
+      }
     });
+    return () => {
+      mounted = false;
+    };
   }, []);
   if (loading) return <div className="p-8 text-sm text-slate-600" role="status">Abriendo el portal institucional...</div>;
   if (!session) return <Navigate to="/login" replace />;
-  return <Navigate to={getRoleHomePath(session.role)} replace />;
+  if (session.role !== 'student') return <Navigate to={getRoleHomePath(session.role)} replace />;
+  const canonicalPath = location.pathname.replace(/^\/privado\/foro(?=\/|$)/, '/alumnos/foro');
+  return <Navigate to={`${canonicalPath}${location.search}${location.hash}`} replace />;
 };
 
 function App() {
@@ -206,6 +218,11 @@ function App() {
           </SupabasePortalRoute>
         }>
           <Route index element={<StudentPortalPage audience="student" />} />
+          <Route path="foro" element={<ForoLayout />}>
+            <Route index element={<ForoFeedPage />} />
+            <Route path="discusion/:id" element={<ForoThreadPage />} />
+            <Route path="*" element={<Navigate to="/alumnos/foro" replace />} />
+          </Route>
         </Route>
 
         <Route

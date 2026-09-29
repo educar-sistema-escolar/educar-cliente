@@ -1,22 +1,31 @@
+import { requireSupabase } from '../../auth/services/supabaseClient';
+
+export type DiscussionCategory =
+  | 'Académico'
+  | 'Vida Escolar'
+  | 'Grupos de Estudio'
+  | 'Intercambio'
+  | 'Deportes';
+
+export type VoteDirection = 'up' | 'down';
+export type DiscussionSort = 'recent' | 'trending' | 'popular';
+
 export interface ForumReply {
-  id: number;
+  id: string;
   authorName: string;
   authorRole: string;
-  authorAvatar?: string;
   date: string;
   content: string;
   score: number;
-  parentId: number | null; // For nested replies
-  userVoted?: 'up' | 'down';
+  parentId: string | null;
+  userVoted?: VoteDirection;
 }
 
 export interface Discussion {
-  id: number;
-  category: 'Académico' | 'Vida Escolar' | 'Grupos de Estudio' | 'Intercambio' | 'Deportes';
+  id: string;
+  category: DiscussionCategory;
   authorName: string;
-  authorHandle: string;
   authorRole: string;
-  authorAvatar?: string;
   title: string;
   date: string;
   score: number;
@@ -24,257 +33,227 @@ export interface Discussion {
   content: string[];
   repliesCount: number;
   replies: ForumReply[];
-  userVoted?: 'up' | 'down';
-  image?: string;
+  userVoted?: VoteDirection;
 }
 
-export interface StudentProfile {
-  name: string;
-  role: string;
-  avatar: string;
-  reputation: number;
-  postsCount: number;
-  badgesCount: number;
-  badges: string[];
+interface DiscussionRow {
+  id: string;
+  category: DiscussionCategory;
+  author_name: string;
+  title: string;
+  lead: string;
+  content: string;
+  created_at: string;
+  score: number;
+  replies_count: number;
 }
 
-const DEFAULT_PROFILE: StudentProfile = {
-  name: 'Mateo Silvetti',
-  role: 'Ingeniería en Sistemas de Información • 4º Año',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200', // Premium female/male portrait from mock
-  reputation: 128,
-  postsCount: 42,
-  badgesCount: 15,
-  badges: ['Contributor', 'Mentor']
-};
+interface ReplyRow {
+  id: string;
+  parent_reply_id: string | null;
+  author_name: string;
+  content: string;
+  created_at: string;
+  score: number;
+}
 
-const DEFAULT_DISCUSSIONS: Discussion[] = [
-  {
-    id: 1,
-    category: 'Académico',
-    authorName: 'Dr. Julian Casale',
-    authorHandle: '@julian_med',
-    authorRole: 'Profesor Adjunto • Facultad de Medicina',
-    authorAvatar: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?q=80&w=150',
-    title: 'Metodología de Estudio en Medicina: ¿Cómo abordar la anatomía clínica?',
-    date: '14 de Mayo, 2024',
-    score: 124,
-    lead: 'Estimados alumnos, ante las consultas recurrentes sobre el volumen de material para el segundo parcial, he decidido abrir este hilo para discutir estrategias de síntesis y retención.',
-    content: [
-      'Estimados alumnos, ante las consultas recurrentes sobre el volumen de material para el segundo parcial, he decidido abrir este hilo para discutir estrategias de síntesis y retención. La anatomía no es solo memoria visual; es comprensión espacial y funcional.',
-      'Mi recomendación principal es la técnica de active recall combinada con diagramas de flujo funcional. No basta con mirar el atlas de Netter durante horas; es necesario cerrar el libro y reconstruir los trayectos nerviosos desde cero sobre una hoja en blanco.',
-      '¿Qué métodos están utilizando ustedes para integrar la histología con la macroscopía? Los leo.'
-    ],
-    repliesCount: 3,
-    replies: [
-      {
-        id: 101,
-        authorName: 'Marcos Aguirre',
-        authorRole: 'Estudiante 3er año',
-        date: 'Hace 2 horas',
-        content: 'Totalmente de acuerdo, Dr. Casale. A mí lo que me funcionó mucho fue el uso de Anki para las inserciones musculares. Pero para la irrigación, nada le gana a dibujar los esquemas de las arterias en un pizarrón.',
-        score: 18,
-        parentId: null
-      },
-      {
-        id: 102,
-        authorName: 'Lucas Benitez',
-        authorRole: 'Estudiante 1er año',
-        authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150',
-        date: 'Hace 45 minutos',
-        content: '¿Marcos, podrías compartir tu mazo de Anki? Me está costando horrores el plexo braquial y creo que ese método me vendría bárbaro.',
-        score: 4,
-        parentId: 101
-      },
-      {
-        id: 103,
-        authorName: 'Sofia Valenzuela',
-        authorRole: 'Ayudante de Cátedra',
-        date: 'Hace 4 horas',
-        content: 'Chicos, recuerden que mañana a las 18hs tenemos el repaso por Meet. Vamos a focalizar justamente en las dudas que están planteando sobre integración clínica.',
-        score: 32,
-        parentId: null
-      }
-    ]
-  },
-  {
-    id: 2,
-    category: 'Vida Escolar',
-    authorName: 'Lucía Morales',
-    authorHandle: '@lucia_m',
-    authorRole: 'Estudiante 2º año',
-    authorAvatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=150',
-    title: '¡Nueva cafetería abierta en el pabellón B!',
-    date: 'Hace 5 horas',
-    score: 89,
-    lead: '¿Alguien ya probó el nuevo espresso bar cerca del auditorio? Escuché que tienen descuentos para estudiantes y la zona de estudio allí es bastante tranquila.',
-    content: [
-      '¿Alguien ya probó el nuevo espresso bar cerca del auditorio? Escuché que tienen descuentos para estudiantes y la zona de estudio allí es bastante tranquila para repasar entre materias.',
-      '¿Qué les parecieron los precios y la calidad del café?'
-    ],
-    repliesCount: 15,
-    replies: []
-  },
-  {
-    id: 3,
-    category: 'Grupos de Estudio',
-    authorName: 'Mateo Silvetti',
-    authorHandle: '@eng_mateo',
-    authorRole: 'Ingeniería en Sistemas • 4º Año',
-    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150',
-    title: 'Buscando compañeros para el proyecto final de Arquitectura de Software',
-    date: 'Hace 1 día',
-    score: 56,
-    lead: 'Necesitamos 2 personas más para el proyecto final. Preferencia por alguien cómodo con Python y optimización de algoritmos.',
-    content: [
-      'Necesitamos 2 personas más para el proyecto final. Preferencia por alguien cómodo con Python y optimización de algoritmos. Nos reunimos este jueves a las 14:00hs en la biblioteca o por Discord.',
-      '¡Cualquier interesado me escribe por privado o responde acá!'
-    ],
-    repliesCount: 8,
-    replies: []
+const DISCUSSION_COLUMNS = 'id,category,author_name,title,lead,content,created_at,score,replies_count';
+const REPLY_COLUMNS = 'id,parent_reply_id,author_name,content,created_at,score';
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+}
+
+function mapDiscussion(row: DiscussionRow, userVoted?: VoteDirection): Discussion {
+  return {
+    id: row.id,
+    category: row.category,
+    authorName: row.author_name,
+    authorRole: 'Estudiante',
+    title: row.title,
+    date: formatDate(row.created_at),
+    score: row.score,
+    lead: row.lead,
+    content: row.content.split(/\n\s*\n/).map((paragraph) => paragraph.trim()).filter(Boolean),
+    repliesCount: row.replies_count,
+    replies: [],
+    userVoted,
+  };
+}
+
+function mapReply(row: ReplyRow, userVoted?: VoteDirection): ForumReply {
+  return {
+    id: row.id,
+    parentId: row.parent_reply_id,
+    authorName: row.author_name,
+    authorRole: 'Estudiante',
+    date: formatDate(row.created_at),
+    content: row.content,
+    score: row.score,
+    userVoted,
+  };
+}
+
+function escapeLikeSearch(value: string): string {
+  return value.replace(/[\\%_"]/g, (character) => `\\${character}`);
+}
+
+export async function listDiscussions(options: {
+  category?: DiscussionCategory;
+  search?: string;
+  sort: DiscussionSort;
+  offset: number;
+  limit: number;
+  authorId?: string;
+}): Promise<{ discussions: Discussion[]; hasMore: boolean }> {
+  const client = requireSupabase();
+  let query = client
+    .from('forum_discussions')
+    .select(DISCUSSION_COLUMNS)
+    .eq('status', 'published');
+
+  if (options.category) query = query.eq('category', options.category);
+  if (options.authorId) query = query.eq('author_id', options.authorId);
+  if (options.search?.trim()) {
+    const pattern = `"%${escapeLikeSearch(options.search.trim())}%"`;
+    query = query.or(`title.ilike.${pattern},lead.ilike.${pattern}`);
   }
-];
 
-const LOCAL_STORAGE_FORUM_KEY = 'educar_forum_discussions';
-const LOCAL_STORAGE_PROFILE_KEY = 'educar_forum_profile';
-
-export const forumStore = {
-  getProfile(): StudentProfile {
-    const data = localStorage.getItem(LOCAL_STORAGE_PROFILE_KEY);
-    if (!data) {
-      localStorage.setItem(LOCAL_STORAGE_PROFILE_KEY, JSON.stringify(DEFAULT_PROFILE));
-      return DEFAULT_PROFILE;
-    }
-    try {
-      return JSON.parse(data);
-    } catch {
-      return DEFAULT_PROFILE;
-    }
-  },
-
-  updateProfile(profile: Partial<StudentProfile>): StudentProfile {
-    const current = this.getProfile();
-    const updated = { ...current, ...profile };
-    localStorage.setItem(LOCAL_STORAGE_PROFILE_KEY, JSON.stringify(updated));
-    return updated;
-  },
-
-  getDiscussions(): Discussion[] {
-    const data = localStorage.getItem(LOCAL_STORAGE_FORUM_KEY);
-    if (!data) {
-      localStorage.setItem(LOCAL_STORAGE_FORUM_KEY, JSON.stringify(DEFAULT_DISCUSSIONS));
-      return DEFAULT_DISCUSSIONS;
-    }
-    try {
-      return JSON.parse(data);
-    } catch {
-      return DEFAULT_DISCUSSIONS;
-    }
-  },
-
-  getDiscussionById(id: number): Discussion | undefined {
-    return this.getDiscussions().find(d => d.id === id);
-  },
-
-  addDiscussion(discussion: Omit<Discussion, 'id' | 'score' | 'repliesCount' | 'replies'>): Discussion {
-    const discussions = this.getDiscussions();
-    const newId = discussions.length > 0 ? Math.max(...discussions.map(d => d.id)) + 1 : 1;
-    const newDiscussion: Discussion = {
-      ...discussion,
-      id: newId,
-      score: 1,
-      repliesCount: 0,
-      replies: []
-    };
-    discussions.unshift(newDiscussion);
-    localStorage.setItem(LOCAL_STORAGE_FORUM_KEY, JSON.stringify(discussions));
-    
-    // Update profile posts count
-    const profile = this.getProfile();
-    this.updateProfile({ postsCount: profile.postsCount + 1, reputation: profile.reputation + 10 });
-    
-    return newDiscussion;
-  },
-
-  addReply(discussionId: number, content: string, parentId: number | null = null): ForumReply | undefined {
-    const discussions = this.getDiscussions();
-    const discIndex = discussions.findIndex(d => d.id === discussionId);
-    if (discIndex === -1) return undefined;
-
-    const disc = discussions[discIndex];
-    const profile = this.getProfile();
-
-    const newReplyId = disc.replies.length > 0 ? Math.max(...disc.replies.map(r => r.id)) + 1 : 101;
-    const newReply: ForumReply = {
-      id: newReplyId,
-      authorName: profile.name,
-      authorRole: 'Estudiante',
-      authorAvatar: profile.avatar,
-      date: 'Hace unos instantes',
-      content,
-      score: 1,
-      parentId
-    };
-
-    disc.replies.push(newReply);
-    disc.repliesCount = disc.replies.length;
-    discussions[discIndex] = disc;
-    localStorage.setItem(LOCAL_STORAGE_FORUM_KEY, JSON.stringify(discussions));
-
-    // Update profile reputation
-    this.updateProfile({ reputation: profile.reputation + 5 });
-
-    return newReply;
-  },
-
-  voteDiscussion(id: number, direction: 'up' | 'down'): Discussion | undefined {
-    const discussions = this.getDiscussions();
-    const index = discussions.findIndex(d => d.id === id);
-    if (index === -1) return undefined;
-
-    const disc = discussions[index];
-    const currentVote = disc.userVoted;
-
-    if (currentVote === direction) {
-      // Undo vote
-      disc.score += direction === 'up' ? -1 : 1;
-      disc.userVoted = undefined;
-    } else {
-      // Apply vote or switch vote direction
-      const diff = currentVote ? (direction === 'up' ? 2 : -2) : (direction === 'up' ? 1 : -1);
-      disc.score += diff;
-      disc.userVoted = direction;
-    }
-
-    discussions[index] = disc;
-    localStorage.setItem(LOCAL_STORAGE_FORUM_KEY, JSON.stringify(discussions));
-    return disc;
-  },
-
-  voteReply(discussionId: number, replyId: number, direction: 'up' | 'down'): ForumReply | undefined {
-    const discussions = this.getDiscussions();
-    const discIndex = discussions.findIndex(d => d.id === discussionId);
-    if (discIndex === -1) return undefined;
-
-    const disc = discussions[discIndex];
-    const replyIndex = disc.replies.findIndex(r => r.id === replyId);
-    if (replyIndex === -1) return undefined;
-
-    const reply = disc.replies[replyIndex];
-    const currentVote = reply.userVoted;
-
-    if (currentVote === direction) {
-      reply.score += direction === 'up' ? -1 : 1;
-      reply.userVoted = undefined;
-    } else {
-      const diff = currentVote ? (direction === 'up' ? 2 : -2) : (direction === 'up' ? 1 : -1);
-      reply.score += diff;
-      reply.userVoted = direction;
-    }
-
-    disc.replies[replyIndex] = reply;
-    discussions[discIndex] = disc;
-    localStorage.setItem(LOCAL_STORAGE_FORUM_KEY, JSON.stringify(discussions));
-    return reply;
+  if (options.sort === 'popular') {
+    query = query.order('score', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false });
+  } else if (options.sort === 'trending') {
+    query = query.order('replies_count', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false });
+  } else {
+    query = query.order('created_at', { ascending: false }).order('id', { ascending: false });
   }
-};
+
+  const { data, error } = await query.range(options.offset, options.offset + options.limit - 1);
+  if (error) throw new Error('forum_load_failed');
+
+  const rows = (data ?? []) as DiscussionRow[];
+  const ids = rows.map((row) => row.id);
+  let votesByDiscussion = new Map<string, VoteDirection>();
+  if (ids.length > 0) {
+    const { data: votes, error: voteError } = await client
+      .from('forum_discussion_votes')
+      .select('discussion_id,direction')
+      .in('discussion_id', ids);
+    if (voteError) throw new Error('forum_load_failed');
+    votesByDiscussion = new Map((votes ?? []).map((vote) => [vote.discussion_id, vote.direction as VoteDirection]));
+  }
+
+  return {
+    discussions: rows.map((row) => mapDiscussion(row, votesByDiscussion.get(row.id))),
+    hasMore: rows.length === options.limit,
+  };
+}
+
+export async function getDiscussionById(id: string): Promise<Discussion | null> {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('forum_discussions')
+    .select(DISCUSSION_COLUMNS)
+    .eq('id', id)
+    .eq('status', 'published')
+    .maybeSingle();
+  if (error) throw new Error('forum_load_failed');
+  if (!data) return null;
+
+  const row = data as DiscussionRow;
+  const [discussionVote, repliesResult] = await Promise.all([
+    client.from('forum_discussion_votes').select('direction').eq('discussion_id', id).maybeSingle(),
+    client
+      .from('forum_replies')
+      .select(REPLY_COLUMNS)
+      .eq('discussion_id', id)
+      .eq('status', 'published')
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true }),
+  ]);
+  if (discussionVote.error || repliesResult.error) throw new Error('forum_load_failed');
+
+  const replies = (repliesResult.data ?? []) as ReplyRow[];
+  const replyIds = replies.map((reply) => reply.id);
+  let votesByReply = new Map<string, VoteDirection>();
+  if (replyIds.length > 0) {
+    const { data: votes, error: voteError } = await client
+      .from('forum_reply_votes')
+      .select('reply_id,direction')
+      .in('reply_id', replyIds);
+    if (voteError) throw new Error('forum_load_failed');
+    votesByReply = new Map((votes ?? []).map((vote) => [vote.reply_id, vote.direction as VoteDirection]));
+  }
+
+  return {
+    ...mapDiscussion(row, discussionVote.data?.direction as VoteDirection | undefined),
+    replies: replies.map((reply) => mapReply(reply, votesByReply.get(reply.id))),
+  };
+}
+
+export async function addDiscussion(input: {
+  category: DiscussionCategory;
+  title: string;
+  lead: string;
+  content: string;
+}): Promise<void> {
+  const { error } = await requireSupabase().from('forum_discussions').insert({
+    category: input.category,
+    title: input.title.trim(),
+    lead: input.lead.trim(),
+    content: input.content.trim(),
+  });
+  if (error) throw new Error('forum_publish_failed');
+}
+
+export async function addReply(discussionId: string, content: string, parentId: string | null = null): Promise<void> {
+  const { error } = await requireSupabase().from('forum_replies').insert({
+    discussion_id: discussionId,
+    parent_reply_id: parentId,
+    content: content.trim(),
+  });
+  if (error) throw new Error('forum_reply_failed');
+}
+
+export async function voteDiscussion(id: string, direction: VoteDirection): Promise<void> {
+  const client = requireSupabase();
+  const { data: current, error: readError } = await client
+    .from('forum_discussion_votes')
+    .select('direction')
+    .eq('discussion_id', id)
+    .maybeSingle();
+  if (readError) throw new Error('forum_vote_failed');
+
+  if (current?.direction === direction) {
+    const { error } = await client.from('forum_discussion_votes').delete().eq('discussion_id', id);
+    if (error) throw new Error('forum_vote_failed');
+    return;
+  }
+
+  const { error } = await client.from('forum_discussion_votes').upsert(
+    { discussion_id: id, direction },
+    { onConflict: 'discussion_id,voter_id' },
+  );
+  if (error) throw new Error('forum_vote_failed');
+}
+
+export async function voteReply(id: string, direction: VoteDirection): Promise<void> {
+  const client = requireSupabase();
+  const { data: current, error: readError } = await client
+    .from('forum_reply_votes')
+    .select('direction')
+    .eq('reply_id', id)
+    .maybeSingle();
+  if (readError) throw new Error('forum_vote_failed');
+
+  if (current?.direction === direction) {
+    const { error } = await client.from('forum_reply_votes').delete().eq('reply_id', id);
+    if (error) throw new Error('forum_vote_failed');
+    return;
+  }
+
+  const { error } = await client.from('forum_reply_votes').upsert(
+    { reply_id: id, direction },
+    { onConflict: 'reply_id,voter_id' },
+  );
+  if (error) throw new Error('forum_vote_failed');
+}

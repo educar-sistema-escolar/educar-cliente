@@ -287,7 +287,7 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
 
           <section className="flex flex-col gap-3 rounded-2xl border border-[#e2e2d8] bg-[#f0eee5] px-5 py-4 text-sm text-[#53686a] sm:flex-row sm:items-start">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#8a6822]" aria-hidden="true" />
-            <p><strong className="text-[#243f50]">En construcción responsable:</strong> asistencia, comunicaciones y el foro no se muestran hasta contar con registros institucionales seguros para esas funciones. Esta ficha solo presenta datos guardados por la escuela.</p>
+            <p><strong className="text-[#243f50]">En construcción responsable:</strong> asistencia y comunicaciones todavía no están disponibles en esta ficha. Los datos académicos que ves corresponden a registros institucionales autorizados.</p>
           </section>
         </>
       )}

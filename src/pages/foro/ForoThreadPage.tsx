@@ -3,111 +3,157 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   MessageSquare, 
-  Share2, 
-  Flag, 
   Send,
-  Award,
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
-import { forumStore } from '../../features/comunidad/services/forumStore';
-import { getSession } from '../../features/auth/services/demoAuth';
-import type { Discussion } from '../../features/comunidad/services/forumStore';
+import {
+  addReply,
+  getDiscussionById,
+  voteDiscussion,
+  voteReply,
+  type Discussion,
+} from '../../features/comunidad/services/forumStore';
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const ForoThreadPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isReadOnly = getSession()?.role === 'parent';
-  const [discussion, setDiscussion] = useState<Discussion | null>(null);
+  const [loadedDiscussion, setLoadedDiscussion] = useState<Discussion | null>(null);
+  const [loadedDiscussionId, setLoadedDiscussionId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadedError, setLoadedError] = useState<string | null>(null);
   const [newReplyContent, setNewReplyContent] = useState('');
-  const [activeReplyId, setActiveReplyId] = useState<number | null>(null); // For nested replying
+  const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [nestedReplyContent, setNestedReplyContent] = useState('');
+  const discussion = loadedDiscussionId === id ? loadedDiscussion : null;
+  const isLoading = Boolean(id && UUID_PATTERN.test(id) && loadedDiscussionId !== id);
+  const error = loadedDiscussionId === id ? loadedError : null;
 
   useEffect(() => {
-    loadThread();
-  }, [id]);
-
-  const loadThread = () => {
-    if (id) {
-      const thread = forumStore.getDiscussionById(Number(id));
+    let cancelled = false;
+    if (!id || !UUID_PATTERN.test(id)) {
+      navigate('/alumnos/foro', { replace: true });
+      return;
+    }
+    void getDiscussionById(id).then((thread) => {
+      if (cancelled) return;
       if (thread) {
-        setDiscussion(thread);
-      } else {
-        navigate('/privado/foro');
+        setLoadedDiscussion(thread);
+        setLoadedError(null);
+        setLoadedDiscussionId(id);
+      } else navigate('/alumnos/foro', { replace: true });
+    }).catch(() => {
+      if (!cancelled) {
+        setLoadedError('No se pudo cargar esta discusión. Volvé a intentar.');
+        setLoadedDiscussionId(id);
+        setLoadedDiscussion(null);
       }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, navigate]);
+
+  async function refreshThread() {
+    if (!id) return;
+    const thread = await getDiscussionById(id);
+    if (thread) {
+      setLoadedDiscussion(thread);
+      setLoadedDiscussionId(id);
+      setLoadedError(null);
+    }
+    else navigate('/alumnos/foro', { replace: true });
+  }
+
+  const handlePostReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReplyContent.trim() || !discussion) return;
+
+    setIsSubmitting(true);
+    setLoadedError(null);
+    try {
+      await addReply(discussion.id, newReplyContent);
+      setNewReplyContent('');
+      await refreshThread();
+    } catch {
+      setLoadedError('No se pudo publicar la respuesta. Volvé a intentar.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handlePostReply = (e: React.FormEvent) => {
+  const handlePostNestedReply = async (e: React.FormEvent, parentId: string) => {
     e.preventDefault();
-    if (isReadOnly) return;
-    if (!newReplyContent.trim() || !discussion) return;
-
-    forumStore.addReply(discussion.id, newReplyContent.trim());
-    setNewReplyContent('');
-    loadThread();
-  };
-
-  const handlePostNestedReply = (e: React.FormEvent, parentId: number) => {
-    e.preventDefault();
-    if (isReadOnly) return;
     if (!nestedReplyContent.trim() || !discussion) return;
 
-    forumStore.addReply(discussion.id, nestedReplyContent.trim(), parentId);
-    setNestedReplyContent('');
-    setActiveReplyId(null);
-    loadThread();
+    setIsSubmitting(true);
+    setLoadedError(null);
+    try {
+      await addReply(discussion.id, nestedReplyContent, parentId);
+      setNestedReplyContent('');
+      setActiveReplyId(null);
+      await refreshThread();
+    } catch {
+      setLoadedError('No se pudo publicar la respuesta. Volvé a intentar.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleVoteDiscussion = (dir: 'up' | 'down') => {
-    if (isReadOnly) return;
+  const handleVoteDiscussion = async (dir: 'up' | 'down') => {
     if (!discussion) return;
-    forumStore.voteDiscussion(discussion.id, dir);
-    loadThread();
+    setLoadedError(null);
+    try {
+      await voteDiscussion(discussion.id, dir);
+      await refreshThread();
+    } catch {
+      setLoadedError('No se pudo registrar tu voto. Volvé a intentar.');
+    }
   };
 
-  const handleVoteReply = (replyId: number, dir: 'up' | 'down') => {
-    if (isReadOnly) return;
+  const handleVoteReply = async (replyId: string, dir: 'up' | 'down') => {
     if (!discussion) return;
-    forumStore.voteReply(discussion.id, replyId, dir);
-    loadThread();
+    setLoadedError(null);
+    try {
+      await voteReply(replyId, dir);
+      await refreshThread();
+    } catch {
+      setLoadedError('No se pudo registrar tu voto. Volvé a intentar.');
+    }
   };
+
+  if (isLoading) {
+    return <div className="py-20 text-center text-slate-400" role="status">Cargando discusión...</div>;
+  }
 
   if (!discussion) {
     return (
-      <div className="py-20 text-center text-slate-400">
-        Cargando discusión...
+      <div className="py-20 text-center text-slate-500">
+        <p role="alert">{error || 'No se encontró esta discusión.'}</p>
+        <Link to="/alumnos/foro" className="mt-4 inline-flex rounded-lg bg-edu-primary px-4 py-2 text-xs font-bold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary">
+          Volver al foro
+        </Link>
       </div>
     );
   }
 
   // Group replies by parent (separate root replies from nested replies)
   const rootReplies = discussion.replies.filter(r => r.parentId === null);
-  const getNestedReplies = (parentId: number) => {
+  const getNestedReplies = (parentId: string) => {
     return discussion.replies.filter(r => r.parentId === parentId);
   };
 
-  // Sidebar Mock Widgets Data
-  const relatedTopics = [
-    { title: 'Examen Final: Consejos de Preparación', comments: 85, category: 'Académico' },
-    { title: 'Nuevas pautas de bioseguridad en laboratorios', comments: 22, category: 'Vida Escolar' },
-    { title: 'Grupo de estudio: Histología I', comments: 14, category: 'Grupos de Estudio' }
-  ];
-
-  const popularDiscussions = [
-    { num: '01', title: 'Becas de investigación: Convocatoria 2024' },
-    { num: '02', title: 'Uso de IA en trabajos prácticos: Debate ético' },
-    { num: '03', title: 'Crónicas del Hospital Escuela: Mi primera guardia' }
-  ];
-
   return (
     <div className="space-y-6 text-left">
+      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{error}</p>}
       
       {/* Back button */}
       <div>
         <Link
-          to="/privado/foro"
-          className="inline-flex items-center gap-2 text-slate-500 hover:text-edu-secondary transition-colors text-xs font-bold uppercase tracking-wider group cursor-pointer"
+          to="/alumnos/foro"
+          className="inline-flex min-h-11 items-center gap-2 rounded px-2 text-slate-500 hover:text-edu-secondary transition-colors text-xs font-bold uppercase tracking-wider group cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
           <span>Volver al foro</span>
@@ -117,23 +163,15 @@ export const ForoThreadPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
         
         {/* Left Column: Post and Thread replies */}
-        <div className="lg:col-span-8 space-y-6">
-          {isReadOnly && (
-            <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-              Estas navegando el hilo en modo lectura familiar. Puedes ver el
-              contenido, pero no responder ni votar.
-            </div>
-          )}
+        <div className="lg:col-span-12 space-y-6">
           
           {/* Main Original Post Card */}
           <article className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-5">
             <header>
               <div className="flex items-center gap-3">
-                <img
-                  src={discussion.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150'}
-                  alt=""
-                  className="w-11 h-11 rounded-full object-cover border border-slate-100"
-                />
+                <div aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-100 bg-edu-primary text-xs font-bold uppercase text-white">
+                  {discussion.authorName.slice(0, 2)}
+                </div>
                 <div className="text-left">
                   <p className="text-xs font-bold text-slate-800 leading-none">{discussion.authorName}</p>
                   <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wide">
@@ -158,11 +196,13 @@ export const ForoThreadPage: React.FC = () => {
               {/* Score / Voting for Post */}
               <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-lg p-0.5 select-none">
                 <button
+                  type="button"
                   onClick={() => handleVoteDiscussion('up')}
-                  disabled={isReadOnly}
-                  className={`p-1 rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
+                  aria-label="Votar a favor de la discusión"
+                  aria-pressed={discussion.userVoted === 'up'}
+                  className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
                     discussion.userVoted === 'up' ? 'text-green-600' : 'text-slate-400'
-                  }`}
+                  } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                   title="Me gusta"
                 >
                   <ChevronUp size={16} />
@@ -173,11 +213,13 @@ export const ForoThreadPage: React.FC = () => {
                   {discussion.score}
                 </span>
                 <button
+                  type="button"
                   onClick={() => handleVoteDiscussion('down')}
-                  disabled={isReadOnly}
-                  className={`p-1 rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
+                  aria-label="Votar en contra de la discusión"
+                  aria-pressed={discussion.userVoted === 'down'}
+                  className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
                     discussion.userVoted === 'down' ? 'text-red-500' : 'text-slate-400'
-                  }`}
+                  } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                   title="No me gusta"
                 >
                   <ChevronDown size={16} />
@@ -189,52 +231,38 @@ export const ForoThreadPage: React.FC = () => {
                   <MessageSquare size={13} />
                   <span>{discussion.repliesCount} Comentarios</span>
                 </div>
-                <button
-                  onClick={() => alert('Enlace copiado al portapapeles')}
-                  className="flex items-center gap-1 hover:text-edu-secondary transition-colors cursor-pointer"
-                >
-                  <Share2 size={13} />
-                  <span>Compartir</span>
-                </button>
               </div>
-
-              <button
-                onClick={() => alert('Tema reportado para moderación')}
-                className="text-slate-400 hover:text-red-500 p-1.5 rounded transition-all cursor-pointer"
-                title="Reportar publicación"
-              >
-                <Flag size={14} />
-              </button>
 
             </footer>
           </article>
 
           {/* Comment/Reply Input Box */}
-          {!isReadOnly && (
           <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex gap-4 items-start border-l-4 border-edu-secondary">
-            <div className="w-9 h-9 rounded-full bg-edu-secondary text-white font-bold text-xs flex items-center justify-center shrink-0">
-              MS
+            <div aria-hidden="true" className="w-9 h-9 rounded-full bg-edu-secondary text-white font-bold text-xs flex items-center justify-center shrink-0">
+              Tú
             </div>
             <form onSubmit={handlePostReply} className="flex-grow space-y-3">
               <textarea
+                aria-label="Escribí una respuesta"
                 value={newReplyContent}
                 onChange={(e) => setNewReplyContent(e.target.value)}
                 placeholder="Escribe tu aporte, consejo o pregunta sobre este tema..."
+                maxLength={2000}
                 className="w-full bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg p-3 text-xs text-slate-700 focus:outline-none min-h-[80px] resize-none placeholder:text-slate-400"
                 required
               />
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-edu-primary hover:bg-edu-secondary text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
+                  disabled={isSubmitting}
+                  className="min-h-11 px-5 bg-edu-primary hover:bg-edu-secondary text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm flex items-center gap-1.5 disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary"
                 >
-                  <Send size={12} />
-                  <span>Publicar Comentario</span>
+                  <Send size={12} aria-hidden="true" />
+                  <span>{isSubmitting ? 'Publicando...' : 'Publicar Comentario'}</span>
                 </button>
               </div>
             </form>
           </div>
-          )}
 
           {/* Thread Replies List */}
           <section className="space-y-4">
@@ -254,12 +282,8 @@ export const ForoThreadPage: React.FC = () => {
                       
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-edu-primary text-white font-bold text-[10px] flex items-center justify-center overflow-hidden border border-slate-100">
-                            {reply.authorAvatar ? (
-                              <img src={reply.authorAvatar} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              reply.authorName.slice(0, 2).toUpperCase()
-                            )}
+                          <div aria-hidden="true" className="w-8 h-8 rounded-full bg-edu-primary text-white font-bold text-[10px] flex items-center justify-center overflow-hidden border border-slate-100">
+                            {reply.authorName.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="text-left">
                             <p className="text-xs font-bold text-slate-800 leading-none">
@@ -272,11 +296,13 @@ export const ForoThreadPage: React.FC = () => {
                         {/* Comment Votes panel */}
                         <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-md py-0.5 px-1 select-none">
                           <button
+                            type="button"
                             onClick={() => handleVoteReply(reply.id, 'up')}
-                            disabled={isReadOnly}
-                            className={`p-0.5 rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
+                            aria-label={`Votar a favor de la respuesta de ${reply.authorName}`}
+                            aria-pressed={reply.userVoted === 'up'}
+                            className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
                               reply.userVoted === 'up' ? 'text-green-600' : 'text-slate-400'
-                            }`}
+                            } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                           >
                             <ChevronUp size={14} />
                           </button>
@@ -286,11 +312,13 @@ export const ForoThreadPage: React.FC = () => {
                             {reply.score}
                           </span>
                           <button
+                            type="button"
                             onClick={() => handleVoteReply(reply.id, 'down')}
-                            disabled={isReadOnly}
-                            className={`p-0.5 rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
+                            aria-label={`Votar en contra de la respuesta de ${reply.authorName}`}
+                            aria-pressed={reply.userVoted === 'down'}
+                            className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
                               reply.userVoted === 'down' ? 'text-red-500' : 'text-slate-400'
-                            }`}
+                            } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                           >
                             <ChevronDown size={14} />
                           </button>
@@ -302,17 +330,16 @@ export const ForoThreadPage: React.FC = () => {
                       </p>
 
                       <div className="pl-10 flex gap-4 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                        {!isReadOnly && (
                         <button
+                          type="button"
                           onClick={() => {
                             setActiveReplyId(activeReplyId === reply.id ? null : reply.id);
                             setNestedReplyContent('');
                           }}
-                          className="hover:text-edu-secondary transition-colors cursor-pointer"
+                          className="inline-flex min-h-11 items-center rounded px-2 hover:text-edu-secondary transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary"
                         >
                           Responder
                         </button>
-                        )}
                       </div>
 
                       {/* Inline Reply input for nested replying */}
@@ -322,15 +349,18 @@ export const ForoThreadPage: React.FC = () => {
                           className="pl-10 mt-3 pt-3 border-t border-slate-100 flex gap-3 items-end"
                         >
                           <textarea
+                            aria-label={`Responder a ${reply.authorName}`}
                             value={nestedReplyContent}
                             onChange={(e) => setNestedReplyContent(e.target.value)}
                             placeholder={`Responder a ${reply.authorName}...`}
+                            maxLength={2000}
                             className="flex-grow bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-1 focus:ring-edu-secondary rounded-lg p-2 text-xs text-slate-700 min-h-[50px] resize-none outline-none focus:outline-none"
                             required
                           />
                           <button
                             type="submit"
-                            className="h-8 px-4 bg-edu-secondary hover:bg-edu-primary text-white rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer"
+                            disabled={isSubmitting}
+                            className="min-h-11 px-4 bg-edu-secondary hover:bg-edu-primary text-white rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-primary"
                           >
                             Enviar
                           </button>
@@ -347,12 +377,8 @@ export const ForoThreadPage: React.FC = () => {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-6.5 h-6.5 rounded-full bg-edu-secondary text-white font-bold text-[8px] flex items-center justify-center overflow-hidden border border-slate-100">
-                              {nestReply.authorAvatar ? (
-                                <img src={nestReply.authorAvatar} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                nestReply.authorName.slice(0, 2).toUpperCase()
-                              )}
+                            <div aria-hidden="true" className="w-6.5 h-6.5 rounded-full bg-edu-secondary text-white font-bold text-[8px] flex items-center justify-center overflow-hidden border border-slate-100">
+                              {nestReply.authorName.slice(0, 2).toUpperCase()}
                             </div>
                             <div className="text-left">
                               <p className="text-xs font-bold text-slate-800 leading-none">
@@ -365,11 +391,13 @@ export const ForoThreadPage: React.FC = () => {
                           {/* Nested Comment Votes panel */}
                           <div className="flex items-center gap-0.5 bg-white border border-slate-100 rounded-md py-0.5 px-0.5 select-none">
                             <button
+                              type="button"
                               onClick={() => handleVoteReply(nestReply.id, 'up')}
-                              disabled={isReadOnly}
-                              className={`p-0.5 rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
+                              aria-label={`Votar a favor de la respuesta de ${nestReply.authorName}`}
+                              aria-pressed={nestReply.userVoted === 'up'}
+                              className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
                                 nestReply.userVoted === 'up' ? 'text-green-600' : 'text-slate-400'
-                              }`}
+                              } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                             >
                               <ChevronUp size={12} />
                             </button>
@@ -379,11 +407,13 @@ export const ForoThreadPage: React.FC = () => {
                               {nestReply.score}
                             </span>
                             <button
+                              type="button"
                               onClick={() => handleVoteReply(nestReply.id, 'down')}
-                              disabled={isReadOnly}
-                              className={`p-0.5 rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
+                              aria-label={`Votar en contra de la respuesta de ${nestReply.authorName}`}
+                              aria-pressed={nestReply.userVoted === 'down'}
+                              className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
                                 nestReply.userVoted === 'down' ? 'text-red-500' : 'text-slate-400'
-                              }`}
+                              } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                             >
                               <ChevronDown size={12} />
                             </button>
@@ -404,74 +434,6 @@ export const ForoThreadPage: React.FC = () => {
           </section>
 
         </div>
-
-        {/* Right Column: Widgets */}
-        <aside className="lg:col-span-4 space-y-6">
-          
-          {/* Related topics */}
-          <section className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
-            <h3 className="text-xs font-bold text-edu-primary pb-2 border-b border-slate-100 uppercase tracking-wide">
-              Temas Relacionados
-            </h3>
-            <ul className="space-y-4">
-              {relatedTopics.map((topic, idx) => (
-                <li key={idx}>
-                  <a className="group block cursor-pointer text-left" href="#" onClick={(e) => e.preventDefault()}>
-                    <span className="block text-xs font-bold text-slate-700 group-hover:text-edu-secondary transition-colors line-clamp-2 leading-snug">
-                      {topic.title}
-                    </span>
-                    <span className="text-[10px] text-slate-400 mt-1 block">
-                      {topic.category} • {topic.comments} comentarios
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {/* Popular discussions ranking */}
-          <section className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
-            <h3 className="text-xs font-bold text-edu-primary pb-2 border-b border-slate-100 uppercase tracking-wide">
-              Discusiones Populares
-            </h3>
-            <div className="space-y-3.5">
-              {popularDiscussions.map((topic, idx) => (
-                <div key={idx} className="flex gap-3 items-center text-left">
-                  <span className="text-edu-secondary font-bold text-sm opacity-55 shrink-0">
-                    {topic.num}
-                  </span>
-                  <p className="text-xs font-semibold text-slate-700 leading-tight hover:text-edu-primary transition-colors cursor-pointer line-clamp-2">
-                    {topic.title}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Top contributors & badges banner */}
-          <section className="bg-edu-primary text-white p-5 rounded-2xl shadow-sm space-y-4 text-left relative overflow-hidden">
-            <div className="absolute top-[-20px] right-[-20px] w-28 h-28 rounded-full bg-white/5 pointer-events-none" />
-            <h3 className="text-[10px] font-bold text-edu-accent uppercase tracking-wider flex items-center gap-1">
-              <Award size={12} />
-              <span>Colaboradores Destacados</span>
-            </h3>
-            
-            {/* Contributors Avatars stack */}
-            <div className="flex -space-x-2.5 overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100" className="inline-block h-8 w-8 rounded-full ring-2 ring-edu-primary object-cover" alt="" />
-              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100" className="inline-block h-8 w-8 rounded-full ring-2 ring-edu-primary object-cover" alt="" />
-              <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=100" className="inline-block h-8 w-8 rounded-full ring-2 ring-edu-primary object-cover" alt="" />
-              <div className="h-8 w-8 rounded-full bg-edu-secondary/40 text-edu-accent font-bold text-[10px] ring-2 ring-edu-primary flex items-center justify-center">
-                +12
-              </div>
-            </div>
-
-            <p className="text-[10px] text-slate-300 leading-relaxed font-medium">
-              ¡Aportá respuestas de calidad en los temas del foro y sumá puntos de reputación escolar para ganar insignias y roles dentro de la comunidad!
-            </p>
-          </section>
-
-        </aside>
 
       </div>
 

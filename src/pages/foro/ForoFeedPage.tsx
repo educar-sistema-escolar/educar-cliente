@@ -1,138 +1,194 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { 
   ChevronUp, 
   ChevronDown, 
   MessageSquare, 
-  Share2, 
   Filter, 
   GraduationCap, 
   Compass, 
   Users, 
   ShoppingBag, 
   Trophy, 
-  ArrowRight,
   Send,
   X,
-  FileText
+  FileText,
+  Search,
 } from 'lucide-react';
-import { forumStore } from '../../features/comunidad/services/forumStore';
-import { getSession } from '../../features/auth/services/demoAuth';
-import type { Discussion } from '../../features/comunidad/services/forumStore';
+import {
+  addDiscussion,
+  listDiscussions,
+  voteDiscussion,
+  type Discussion,
+  type DiscussionCategory,
+  type DiscussionSort,
+} from '../../features/comunidad/services/forumStore';
+
+const PAGE_SIZE = 20;
+const CATEGORIES: DiscussionCategory[] = [
+  'Académico',
+  'Vida Escolar',
+  'Grupos de Estudio',
+  'Intercambio',
+  'Deportes',
+];
 
 export const ForoFeedPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const isReadOnly = getSession()?.role === 'parent';
-
-  // State
   const [discussions, setDiscussions] = useState<Discussion[]>([]);
-  const [activeTab, setActiveTab] = useState<'recent' | 'trending' | 'popular'>('recent');
-  
-  // Modal State
+  const [activeTab, setActiveTab] = useState<DiscussionSort>('recent');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newCategory, setNewCategory] = useState<'Académico' | 'Vida Escolar' | 'Grupos de Estudio' | 'Intercambio' | 'Deportes'>('Académico');
+  const [newCategory, setNewCategory] = useState<DiscussionCategory>('Académico');
   const [newLead, setNewLead] = useState('');
   const [newBody, setNewBody] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loadedFeedKey, setLoadedFeedKey] = useState<string | null>(null);
+  const composerDialogRef = useRef<HTMLDialogElement>(null);
+  const composerTitleRef = useRef<HTMLInputElement>(null);
+  const composerTriggerRef = useRef<HTMLButtonElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
-  // Load discussions on mount & filters
+  const categoryParam = searchParams.get('category');
+  const categoryFilter = CATEGORIES.includes(categoryParam as DiscussionCategory)
+    ? (categoryParam as DiscussionCategory)
+    : undefined;
+  const searchFilter = searchParams.get('search')?.trim() || undefined;
+  const createRequested = searchParams.get('create') === 'true';
+  const composerOpen = isModalOpen || createRequested;
+  const feedKey = `${categoryFilter ?? ''}\u0000${searchFilter ?? ''}\u0000${activeTab}`;
+  const feedLoading = isLoading || loadedFeedKey !== feedKey;
+  const visibleDiscussions = loadedFeedKey === feedKey ? discussions : [];
+  const visibleHasMore = loadedFeedKey === feedKey && hasMore;
+  const visibleError = loadedFeedKey === feedKey ? error : null;
+
   useEffect(() => {
-    // Check if modal needs to be opened from URL
-    if (searchParams.get('create') === 'true') {
-      if (isReadOnly) {
-        setIsModalOpen(false);
-      } else {
-        setIsModalOpen(true);
+    const dialog = composerDialogRef.current;
+    if (!dialog) return;
+
+    if (composerOpen && !dialog.open) {
+      const activeElement = document.activeElement;
+      returnFocusRef.current = activeElement instanceof HTMLElement && activeElement !== document.body
+        ? activeElement
+        : composerTriggerRef.current;
+      dialog.showModal();
+      composerTitleRef.current?.focus();
+    } else if (!composerOpen && dialog.open) {
+      dialog.close();
+      const returnTarget = returnFocusRef.current;
+      if (returnTarget?.isConnected) requestAnimationFrame(() => returnTarget.focus());
+    }
+  }, [composerOpen]);
+
+  const loadPage = useCallback((offset: number) => listDiscussions({
+    category: categoryFilter,
+    search: searchFilter,
+    sort: activeTab,
+    offset,
+    limit: PAGE_SIZE,
+  }), [activeTab, categoryFilter, searchFilter]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadPage(0).then((page) => {
+      if (!cancelled) {
+        setDiscussions(page.discussions);
+        setHasMore(page.hasMore);
+        setError(null);
+        setLoadedFeedKey(feedKey);
       }
+    }).catch(() => {
+      if (!cancelled) {
+        setError('No se pudieron cargar las discusiones. Volvé a intentar.');
+        setLoadedFeedKey(feedKey);
+      }
+    }).finally(() => {
+      if (!cancelled) setIsLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [feedKey, loadPage]);
+
+  async function refreshDiscussions() {
+    const page = await loadPage(0);
+    setDiscussions(page.discussions);
+    setHasMore(page.hasMore);
+  }
+
+  async function handleVote(id: string, direction: 'up' | 'down') {
+    setError(null);
+    try {
+      await voteDiscussion(id, direction);
+      await refreshDiscussions();
+    } catch {
+      setError('No se pudo registrar tu voto. Volvé a intentar.');
     }
-    loadDiscussions();
-  }, [isReadOnly, searchParams]);
+  }
 
-  const loadDiscussions = () => {
-    let list = forumStore.getDiscussions();
-    
-    // Filter by category if query param exists
-    const catFilter = searchParams.get('category');
-    if (catFilter) {
-      list = list.filter(d => d.category === catFilter);
+  async function handleLoadMore() {
+    setIsLoadingMore(true);
+    setError(null);
+    try {
+      const page = await loadPage(discussions.length);
+      setDiscussions((current) => [...current, ...page.discussions]);
+      setHasMore(page.hasMore);
+    } catch {
+      setError('No se pudieron cargar más discusiones. Volvé a intentar.');
+    } finally {
+      setIsLoadingMore(false);
     }
-
-    // Filter by search query if exists
-    const searchFilter = searchParams.get('search');
-    if (searchFilter) {
-      list = list.filter(d => 
-        d.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
-        d.lead.toLowerCase().includes(searchFilter.toLowerCase())
-      );
-    }
-
-    // Sort based on tab
-    if (activeTab === 'popular') {
-      list.sort((a, b) => b.score - a.score);
-    } else if (activeTab === 'trending') {
-      list.sort((a, b) => b.repliesCount - a.repliesCount);
-    } else {
-      // Recent (default sort by ID desc)
-      list.sort((a, b) => b.id - a.id);
-    }
-
-    setDiscussions(list);
-  };
-
-  useEffect(() => {
-    loadDiscussions();
-  }, [activeTab]);
-
-  const handleVote = (id: number, dir: 'up' | 'down') => {
-    if (isReadOnly) {
-      return;
-    }
-    forumStore.voteDiscussion(id, dir);
-    loadDiscussions();
-  };
+  }
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setError(null);
     // Remove "create" query param from URL
     const newParams = new URLSearchParams(searchParams);
     newParams.delete('create');
     setSearchParams(newParams);
   };
 
-  const handleCreatePost = (e: React.FormEvent) => {
+  const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newTitle.trim() || !newLead.trim() || !newBody.trim()) {
+      setError('Completá el título, la introducción y el contenido.');
+      return;
+    }
 
-    if (isReadOnly) {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await addDiscussion({ category: newCategory, title: newTitle, lead: newLead, content: newBody });
+      setNewTitle('');
+      setNewLead('');
+      setNewBody('');
       handleCloseModal();
-      return;
+      await refreshDiscussions();
+    } catch {
+      setError('No se pudo publicar el tema. Revisá los campos e intentá de nuevo.');
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    if (!newTitle || !newLead || !newBody) {
-      alert('Por favor, completá los campos obligatorios.');
-      return;
-    }
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const search = String(formData.get('search') ?? '').trim();
+    const newParams = new URLSearchParams(searchParams);
+    if (search) newParams.set('search', search);
+    else newParams.delete('search');
+    setSearchParams(newParams);
+  };
 
-    const profile = forumStore.getProfile();
-    const contentParagraphs = newBody.split('\n\n').filter(p => p.trim().length > 0);
-
-    forumStore.addDiscussion({
-      category: newCategory,
-      authorName: profile.name,
-      authorHandle: '@' + profile.name.toLowerCase().replace(/\s+/g, '_'),
-      authorRole: 'Alumno',
-      authorAvatar: profile.avatar,
-      title: newTitle,
-      date: 'Hace unos instantes',
-      lead: newLead,
-      content: contentParagraphs
-    });
-
-    // Reset form and close modal
-    setNewTitle('');
-    setNewLead('');
-    setNewBody('');
-    handleCloseModal();
-    loadDiscussions();
+  const handleOpenComposer = () => {
+    setError(null);
+    setIsModalOpen(true);
   };
 
   const handleCategorySelect = (categoryName: string | null) => {
@@ -145,7 +201,7 @@ export const ForoFeedPage: React.FC = () => {
     setSearchParams(newParams);
   };
 
-  const currentCategory = searchParams.get('category') || 'Todas';
+  const currentCategory = categoryFilter || 'Todas';
 
   const categoryIcons: Record<string, React.ReactNode> = {
     'Todas': <Compass size={16} />,
@@ -160,19 +216,51 @@ export const ForoFeedPage: React.FC = () => {
     <div className="space-y-6">
       
       {/* Bento Banner */}
-      <div className="relative rounded-2xl overflow-hidden h-36 md:h-44 shadow-sm border border-slate-200/40 flex items-center px-6 md:px-10">
+      <div className="relative min-h-40 overflow-hidden rounded-2xl border border-slate-200/40 px-6 py-5 shadow-sm md:min-h-44 md:px-10">
         <img 
           src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=1200" 
           alt="Student Campus"
           className="absolute inset-0 w-full h-full object-cover" 
         />
         <div className="absolute inset-0 bg-gradient-to-r from-edu-primary/95 to-edu-secondary/40 mix-blend-multiply" />
-        <div className="relative z-10 text-left text-white max-w-xl space-y-1">
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight">Foro Estudiantil</h2>
+        <div className="relative z-10 max-w-xl space-y-1 text-left text-white">
+          <h1 className="text-xl font-bold tracking-tight md:text-2xl">Foro estudiantil</h1>
           <p className="text-xs md:text-sm text-slate-200 leading-relaxed font-medium">
             La comunidad oficial de alumnos de Educar para Transformar. Compartí ideas, resolvé dudas y colaborá con tus compañeros.
           </p>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <form onSubmit={handleSearchSubmit} role="search" className="flex min-w-0 flex-1 gap-2 sm:max-w-xl">
+          <div className="min-w-0 flex-1">
+            <label htmlFor="forum-search" className="mb-1 block text-xs font-semibold text-slate-600">Buscar discusiones</label>
+            <input
+              key={searchFilter ?? ''}
+              id="forum-search"
+              name="search"
+              type="search"
+              maxLength={120}
+              defaultValue={searchFilter ?? ''}
+              placeholder="Buscar por título o introducción..."
+              className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20"
+            />
+          </div>
+          <button type="submit" aria-label="Buscar" className="mb-0 inline-flex min-h-11 min-w-11 items-center justify-center self-end rounded-xl bg-edu-primary text-white hover:bg-edu-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary">
+            <Search size={18} aria-hidden="true" />
+          </button>
+        </form>
+        <button
+          ref={composerTriggerRef}
+          type="button"
+          onClick={handleOpenComposer}
+          aria-haspopup="dialog"
+          aria-controls="new-forum-post-dialog"
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-edu-secondary px-5 text-sm font-bold text-white transition-colors hover:bg-edu-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-primary"
+        >
+          <MessageSquare size={16} aria-hidden="true" />
+          Nueva publicación
+        </button>
       </div>
 
       {/* Main Grid */}
@@ -188,12 +276,14 @@ export const ForoFeedPage: React.FC = () => {
                 return (
                   <button
                     key={cat}
+                    type="button"
                     onClick={() => handleCategorySelect(cat === 'Todas' ? null : cat)}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all cursor-pointer text-left ${
+                    aria-pressed={active}
+                    className={`flex min-h-11 items-center gap-3 px-4 rounded-xl text-xs font-semibold tracking-wide transition-all cursor-pointer text-left ${
                       active
                         ? 'bg-edu-secondary/10 text-edu-primary font-bold'
                         : 'text-slate-500 hover:bg-slate-50 hover:text-edu-secondary'
-                    }`}
+                    } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                   >
                     <div className={active ? 'text-edu-secondary' : 'text-slate-400'}>
                       {categoryIcons[cat]}
@@ -205,22 +295,6 @@ export const ForoFeedPage: React.FC = () => {
             </nav>
           </div>
 
-          {/* Exam season support widget */}
-          <div className="rounded-2xl overflow-hidden shadow-sm relative group cursor-pointer border border-slate-200/50">
-            <img 
-              alt="Estudiando" 
-              className="w-full h-44 object-cover group-hover:scale-103 transition-transform duration-500" 
-              src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=400"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent flex flex-col justify-end p-4 text-left">
-              <span className="text-[8px] font-bold text-edu-accent uppercase tracking-widest">Tutorías Escolares</span>
-              <h4 className="text-white font-bold text-xs mt-1">Apoyo en Época de Exámenes</h4>
-              <p className="text-[10px] text-slate-300 leading-snug mt-1.5 flex items-center gap-1 group-hover:text-white transition-colors">
-                <span>Reservar turno con un mentor</span>
-                <ArrowRight size={10} />
-              </p>
-            </div>
-          </div>
         </aside>
 
         {/* Mobile Category Horizontal Slider */}
@@ -230,12 +304,14 @@ export const ForoFeedPage: React.FC = () => {
             return (
               <button
                 key={cat}
+                type="button"
                 onClick={() => handleCategorySelect(cat === 'Todas' ? null : cat)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap border shrink-0 transition-all cursor-pointer ${
+                aria-pressed={active}
+                className={`flex min-h-11 items-center gap-2 px-4 rounded-full text-xs font-semibold whitespace-nowrap border shrink-0 transition-all cursor-pointer ${
                   active
                     ? 'bg-edu-primary border-edu-primary text-white shadow-sm'
                     : 'bg-white border-slate-200 text-slate-500'
-                }`}
+                } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
               >
                 {categoryIcons[cat]}
                 <span>{cat}</span>
@@ -248,11 +324,13 @@ export const ForoFeedPage: React.FC = () => {
         <div className="lg:col-span-3 space-y-4">
           
           {/* Feed Filter controls */}
-          <div className="bg-white p-3 px-5 rounded-xl border border-slate-200/60 shadow-sm flex justify-between items-center">
-            <div className="flex gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/60 bg-white p-3 shadow-sm sm:px-5">
+            <div className="flex flex-wrap gap-1 sm:gap-3">
               <button
+                type="button"
                 onClick={() => setActiveTab('recent')}
-                className={`text-xs font-bold uppercase tracking-wider cursor-pointer pb-1 transition-all ${
+                aria-pressed={activeTab === 'recent'}
+                className={`inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-bold uppercase tracking-wider cursor-pointer transition-all sm:px-3 ${
                   activeTab === 'recent' 
                     ? 'border-b-2 border-edu-secondary text-edu-primary' 
                     : 'text-slate-400 hover:text-slate-600'
@@ -261,8 +339,10 @@ export const ForoFeedPage: React.FC = () => {
                 Recientes
               </button>
               <button
+                type="button"
                 onClick={() => setActiveTab('trending')}
-                className={`text-xs font-bold uppercase tracking-wider cursor-pointer pb-1 transition-all ${
+                aria-pressed={activeTab === 'trending'}
+                className={`inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-bold uppercase tracking-wider cursor-pointer transition-all sm:px-3 ${
                   activeTab === 'trending' 
                     ? 'border-b-2 border-edu-secondary text-edu-primary' 
                     : 'text-slate-400 hover:text-slate-600'
@@ -271,8 +351,10 @@ export const ForoFeedPage: React.FC = () => {
                 Populares (Respuestas)
               </button>
               <button
+                type="button"
                 onClick={() => setActiveTab('popular')}
-                className={`text-xs font-bold uppercase tracking-wider cursor-pointer pb-1 transition-all ${
+                aria-pressed={activeTab === 'popular'}
+                className={`inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-bold uppercase tracking-wider cursor-pointer transition-all sm:px-3 ${
                   activeTab === 'popular' 
                     ? 'border-b-2 border-edu-secondary text-edu-primary' 
                     : 'text-slate-400 hover:text-slate-600'
@@ -288,7 +370,13 @@ export const ForoFeedPage: React.FC = () => {
           </div>
 
           {/* Discussions List */}
-          {discussions.length === 0 ? (
+          {visibleError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{visibleError}</p>}
+
+          {feedLoading ? (
+            <div className="rounded-2xl border border-slate-200/60 bg-white py-16 text-center text-sm text-slate-500" role="status">
+              Cargando discusiones...
+            </div>
+          ) : visibleDiscussions.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm py-16 text-center max-w-lg mx-auto px-6">
               <div className="w-14 h-14 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText size={28} />
@@ -300,7 +388,7 @@ export const ForoFeedPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {discussions.map((disc) => (
+              {visibleDiscussions.map((disc) => (
                 <article
                   key={disc.id}
                   className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md transition-all duration-300 flex gap-4 items-start text-left relative group"
@@ -308,11 +396,13 @@ export const ForoFeedPage: React.FC = () => {
                   {/* Upvote/Downvote panel */}
                   <div className="flex flex-col items-center bg-slate-50 rounded-lg py-1 px-1.5 gap-1 select-none border border-slate-100/50">
                       <button
+                      type="button"
                       onClick={() => handleVote(disc.id, 'up')}
-                      disabled={isReadOnly}
-                      className={`p-1 rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
+                      aria-label={`Votar a favor: ${disc.title}`}
+                      aria-pressed={disc.userVoted === 'up'}
+                      className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
                         disc.userVoted === 'up' ? 'text-green-600' : 'text-slate-400'
-                      }`}
+                      } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                     >
                       <ChevronUp size={18} />
                     </button>
@@ -322,11 +412,13 @@ export const ForoFeedPage: React.FC = () => {
                       {disc.score}
                     </span>
                     <button
+                      type="button"
                       onClick={() => handleVote(disc.id, 'down')}
-                      disabled={isReadOnly}
-                      className={`p-1 rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
+                      aria-label={`Votar en contra: ${disc.title}`}
+                      aria-pressed={disc.userVoted === 'down'}
+                      className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
                         disc.userVoted === 'down' ? 'text-red-500' : 'text-slate-400'
-                      }`}
+                      } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                     >
                       <ChevronDown size={18} />
                     </button>
@@ -339,11 +431,11 @@ export const ForoFeedPage: React.FC = () => {
                         {disc.category}
                       </span>
                       <span className="text-[10px] text-slate-400">
-                        Publicado por <strong className="text-slate-500 font-semibold">{disc.authorHandle}</strong> • {disc.date}
+                        Publicado por <strong className="text-slate-500 font-semibold">{disc.authorName}</strong> • {disc.date}
                       </span>
                     </div>
 
-                    <Link to={`/privado/foro/discusion/${disc.id}`} className="block">
+                    <Link to={`/alumnos/foro/discusion/${disc.id}`} className="block rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary">
                       <h3 className="text-sm md:text-base font-bold text-slate-800 hover:text-edu-secondary transition-colors leading-snug line-clamp-2">
                         {disc.title}
                       </h3>
@@ -357,41 +449,14 @@ export const ForoFeedPage: React.FC = () => {
                     <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100/60">
                       <div className="flex gap-4">
                         <Link 
-                          to={`/privado/foro/discusion/${disc.id}`}
-                          className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-edu-secondary transition-colors"
+                          to={`/alumnos/foro/discusion/${disc.id}`}
+                          className="inline-flex min-h-11 items-center gap-1.5 rounded px-2 text-[10px] font-bold text-slate-400 hover:text-edu-secondary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary"
                         >
                           <MessageSquare size={13} />
                           <span>{disc.repliesCount} respuestas</span>
                         </Link>
-                        <button
-                          onClick={() => alert('Enlace de discusión copiado al portapapeles')}
-                          className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-edu-secondary transition-colors cursor-pointer"
-                        >
-                          <Share2 size={13} />
-                          <span>Compartir</span>
-                        </button>
                       </div>
 
-                      {/* Replying Avatars Preview */}
-                      {disc.replies.length > 0 && (
-                        <div className="flex -space-x-1.5 overflow-hidden">
-                          {disc.replies.slice(0, 3).map((rep) => (
-                            <div 
-                              key={rep.id} 
-                              className="w-5.5 h-5.5 rounded-full border border-white bg-slate-200 overflow-hidden"
-                              title={rep.authorName}
-                            >
-                              {rep.authorAvatar ? (
-                                <img src={rep.authorAvatar} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[7px] font-bold bg-slate-300 text-slate-700 uppercase">
-                                  {rep.authorName.slice(0, 2)}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -400,39 +465,64 @@ export const ForoFeedPage: React.FC = () => {
             </div>
           )}
 
+          {!feedLoading && visibleHasMore && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => void handleLoadMore()}
+                disabled={isLoadingMore}
+                className="min-h-11 rounded-xl border border-slate-200 bg-white px-5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary"
+              >
+                {isLoadingMore ? 'Cargando...' : 'Cargar más discusiones'}
+              </button>
+            </div>
+          )}
+
         </div>
 
       </div>
 
-      {/* Crear Discusión Modal */}
-      {isModalOpen && !isReadOnly && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-scaleUp">
+      <dialog
+        ref={composerDialogRef}
+        id="new-forum-post-dialog"
+        aria-labelledby="new-forum-post-title"
+        onCancel={(event) => {
+          event.preventDefault();
+          handleCloseModal();
+        }}
+        className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl backdrop:bg-slate-900/40 backdrop:backdrop-blur-sm"
+      >
+          <div className="animate-scaleUp">
             
             <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
-              <h3 className="font-bold text-sm text-edu-primary flex items-center gap-2 uppercase tracking-wide">
+              <h3 id="new-forum-post-title" className="font-bold text-sm text-edu-primary flex items-center gap-2 uppercase tracking-wide">
                 <MessageSquare size={18} className="text-edu-secondary" />
                 <span>Nueva Publicación en el Foro</span>
               </h3>
               <button
+                type="button"
+                aria-label="Cerrar formulario"
                 onClick={handleCloseModal}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 cursor-pointer"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary"
               >
                 <X size={18} />
               </button>
             </div>
 
+            {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
+
             <form onSubmit={handleCreatePost} className="space-y-4 text-left">
               
               {/* Category */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                <label htmlFor="forum-post-category" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
                   Categoría del Tema
                 </label>
                 <select
+                  id="forum-post-category"
                   value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value as any)}
-                  className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-edu-secondary focus:border-edu-secondary text-slate-700 outline-none"
+                  onChange={(e) => setNewCategory(e.target.value as DiscussionCategory)}
+                  className="min-h-11 w-full px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-edu-secondary focus:border-edu-secondary text-slate-700 outline-none"
                 >
                   <option value="Académico">Académico</option>
                   <option value="Vida Escolar">Vida Escolar</option>
@@ -444,41 +534,48 @@ export const ForoFeedPage: React.FC = () => {
 
               {/* Title */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                <label htmlFor="forum-post-title" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
                   Título de la Discusión <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="forum-post-title"
+                  ref={composerTitleRef}
                   type="text"
+                  maxLength={180}
                   placeholder="Ej: ¿Bibliografía recomendada para Análisis Matemático I?"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                  className="min-h-11 w-full px-3 bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
                   required
                 />
               </div>
 
               {/* Lead / Short Summary */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                <label htmlFor="forum-post-lead" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
                   Introducción / Resumen Breve <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="forum-post-lead"
                   type="text"
+                  maxLength={200}
                   placeholder="Añade un subtítulo breve para el feed (máx 120 car.)..."
                   value={newLead}
                   onChange={(e) => setNewLead(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                  className="min-h-11 w-full px-3 bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
                   required
                 />
               </div>
 
               {/* Content Body */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                <label htmlFor="forum-post-content" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
                   Explicación / Contenido de la Consulta <span className="text-red-500">*</span>
                 </label>
                 <textarea
+                  id="forum-post-content"
                   placeholder="Escribe en detalle tu consulta, propuesta o sugerencia..."
+                  maxLength={10000}
                   value={newBody}
                   onChange={(e) => setNewBody(e.target.value)}
                   className="w-full h-32 bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg p-3 text-xs text-slate-700 focus:outline-none placeholder:text-slate-400"
@@ -491,23 +588,23 @@ export const ForoFeedPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                  className="min-h-11 flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-edu-secondary hover:bg-edu-primary text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+                  disabled={isSubmitting}
+                  className="min-h-11 flex-1 bg-edu-secondary hover:bg-edu-primary text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-sm flex items-center justify-center gap-1.5 disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-primary"
                 >
                   <Send size={13} />
-                  <span>Publicar Tema</span>
+                  <span>{isSubmitting ? 'Publicando...' : 'Publicar Tema'}</span>
                 </button>
               </div>
 
             </form>
           </div>
-        </div>
-      )}
+      </dialog>
 
     </div>
   );
