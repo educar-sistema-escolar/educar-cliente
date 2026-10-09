@@ -40,6 +40,7 @@ const NAV_ITEMS = [
   { label: 'Registros académicos', icon: ClipboardPenLine, path: '/privado/registros-academicos' },
   { label: 'Servicios', icon: Bus, path: '/privado/servicios' },
   { label: 'Reportes', icon: BarChart3, path: '/privado/reportes' },
+  { label: 'Facturación', icon: BarChart3, path: '/privado/facturacion' },
 ];
 
 const COMMUNITY_ITEMS = [

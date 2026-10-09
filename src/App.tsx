@@ -32,6 +32,7 @@ import { AcademicMasterDataPage } from './pages/admin/AcademicMasterDataPage';
 import { PermisosPage } from './pages/admin/PermisosPage';
 import { AcademicRecordsPage } from './pages/admin/AcademicRecordsPage';
 import { ServiciosPage } from './pages/admin/ServiciosPage';
+import { BillingPage } from './pages/admin/BillingPage';
 import { ReportsPage } from './pages/admin/ReportsPage';
 import { StudentPortalPage } from './pages/student/StudentPortalPage';
 import { StudentPortalLayout } from './pages/student/StudentPortalLayout';
@@ -197,6 +198,7 @@ function App() {
           <Route path="registros-academicos" element={<AcademicRecordsPage />} />
           <Route path="servicios" element={<ServiciosPage />} />
           <Route path="reportes" element={<ReportsPage />} />
+          <Route path="facturacion" element={<BillingPage />} />
           <Route path="actividades" element={<Navigate to="servicios" replace />} />
           <Route path="comentarios" element={<CommentsModerationPage />} />
           <Route path="niveles" element={<AcademicMasterDataPage key="levels" resource="levels" />} />
