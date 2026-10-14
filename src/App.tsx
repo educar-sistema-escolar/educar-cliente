@@ -21,8 +21,8 @@ import { OpinionModerationPage } from './pages/admin/OpinionModerationPage';
 import { CuentasDelSistemaPage } from './pages/admin/CuentasDelSistemaPage';
 import { TeacherLayout } from './pages/teacher/TeacherLayout';
 import { TeacherDashboardPage } from './pages/teacher/TeacherDashboardPage';
-import { getRoleHomePath, getSession } from './features/auth/services/demoAuth';
-import type { DemoUserRole } from './features/auth/types';
+import { getRoleHomePath } from './features/auth/services/demoAuth';
+
 import {
   getSupabaseAccountSession,
   subscribeToSupabaseAuth,
@@ -45,26 +45,6 @@ const PublicLayout = () => (
     <Outlet />
   </MainLayout>
 );
-
-const RoleProtectedRoute = ({
-  allowedRoles,
-  children,
-}: {
-  allowedRoles: DemoUserRole[];
-  children: ReactNode;
-}) => {
-  const session = getSession();
-
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!allowedRoles.includes(session.role)) {
-    return <Navigate to={getRoleHomePath(session.role)} replace />;
-  }
-
-  return <>{children}</>;
-};
 
 const SupabaseAdminRoute = ({ children }: { children: ReactNode }) => {
   const [sessionState, setSessionState] = useState<{
@@ -230,9 +210,9 @@ function App() {
         <Route
           path="/docentes"
           element={
-            <RoleProtectedRoute allowedRoles={['teacher']}>
+            <SupabasePortalRoute allowedRoles={['teacher']}>
               <TeacherLayout />
-            </RoleProtectedRoute>
+            </SupabasePortalRoute>
           }
         >
           <Route index element={<TeacherDashboardPage />} />

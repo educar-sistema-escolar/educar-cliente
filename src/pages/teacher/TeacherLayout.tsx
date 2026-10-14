@@ -1,92 +1,43 @@
-import React, { useEffect } from 'react';
-import { Link, Outlet, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, GraduationCap, LogOut, School } from 'lucide-react';
-import {
-  clearSession,
-  getRoleHomePath,
-  getSession,
-} from '../../features/auth/services/demoAuth';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { ArrowUpRight, BookOpen, CalendarDays, GraduationCap, LogOut } from 'lucide-react';
+import { getSupabaseAccountSession, signOutSupabase, type SupabaseAccountSession } from '../../features/auth/services/supabaseAuth';
+import './teacher.css';
 
-export const TeacherLayout: React.FC = () => {
+export function TeacherLayout() {
   const navigate = useNavigate();
-  const session = getSession();
-
+  const [session, setSession] = useState<SupabaseAccountSession | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+  const [error, setError] = useState('');
   useEffect(() => {
-    if (!session) {
-      navigate('/login');
-      return;
-    }
-
-    if (session.role !== 'teacher') {
-      navigate(getRoleHomePath(session.role));
-    }
-  }, [navigate, session]);
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
-      <header className="border-b border-slate-200/70 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-edu-primary/10 p-3 text-edu-primary">
-              <School className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                Acceso docente
-              </p>
-              <h1 className="text-lg font-bold text-edu-primary">
-                Portal docente
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Volver a la web</span>
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                clearSession();
-                navigate('/login');
-              }}
-              className="inline-flex items-center gap-2 rounded-2xl bg-red-50 px-4 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Cerrar sesión</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[240px_1fr]">
-        <aside className="rounded-3xl border border-slate-200/70 bg-white p-4 shadow-sm">
-          <nav className="space-y-2">
-            <Link
-              to="/docentes"
-              className="flex items-center gap-3 rounded-2xl bg-edu-primary/10 px-4 py-3 text-sm font-semibold text-edu-primary"
-            >
-              <GraduationCap className="h-4 w-4" />
-              <span>Inicio docente</span>
-            </Link>
-            <Link
-              to="/noticias"
-              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-edu-primary"
-            >
-              <BookOpen className="h-4 w-4" />
-              <span>Noticias publicas</span>
-            </Link>
-          </nav>
-        </aside>
-
-        <main className="min-w-0">
-          <Outlet />
-        </main>
+    let active = true;
+    void getSupabaseAccountSession().then(account => { if (active) setSession(account); });
+    return () => { active = false; };
+  }, []);
+  async function logout() {
+    setSigningOut(true); setError('');
+    try { await signOutSupabase(); navigate('/login', { replace: true }); }
+    catch { setError('No se pudo cerrar la sesión. Intenta nuevamente.'); setSigningOut(false); }
+  }
+  return <div className="teacher-shell">
+    <a href="#teacher-content" className="teacher-skip">Saltar al contenido</a>
+    <aside className="teacher-sidebar">
+      <Link to="/docentes" className="teacher-brand"><GraduationCap size={30} /><span>educar<span>ESPACIO DOCENTE</span></span></Link>
+      <p className="teacher-nav-label">TU AULA, EN UN SOLO LUGAR</p>
+      <nav aria-label="Navegación docente">
+        <NavLink to="/docentes" end><BookOpen size={19} /> Mis materias</NavLink>
+        <NavLink to="/docentes/agenda"><CalendarDays size={19} /> Agenda semanal</NavLink>
+      </nav>
+      <div className="teacher-sidebar-bottom">
+        <Link to="/" className="teacher-web-link">Sitio institucional <ArrowUpRight size={16} /></Link>
+        <div className="teacher-account"><span className="teacher-avatar">{session?.name.charAt(0) || 'D'}</span><div><strong>{session?.name || 'Docente'}</strong><small>Cuenta institucional</small></div></div>
+        <button onClick={() => void logout()} disabled={signingOut} className="teacher-logout"><LogOut size={17} />{signingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}</button>
+        {error && <p role="alert">{error}</p>}
       </div>
-    </div>
-  );
-};
+    </aside>
+    <main id="teacher-content" className="teacher-main">
+      <header className="teacher-topbar"><span><span className="teacher-live-dot" /> Portal docente</span><time>{new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</time></header>
+      {session ? <Outlet context={session} /> : <p role="status" className="teacher-state">Preparando tu espacio docente…</p>}
+    </main>
+  </div>;
+}

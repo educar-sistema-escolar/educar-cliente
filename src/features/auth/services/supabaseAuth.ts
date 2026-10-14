@@ -1,5 +1,6 @@
 import type { AuthSession } from '../types';
 import { supabase, requireSupabase } from './supabaseClient';
+import { resolveInstitutionalRole } from './institutionalRole';
 
 export interface SupabaseAccountSession extends AuthSession {
   profileId: string;
@@ -34,8 +35,8 @@ export async function getSupabaseAccountSession(): Promise<SupabaseAccountSessio
   const profile = data as AuthenticatedProfile;
   if (!profile.is_active || profile.account_status !== 'active') return null;
 
-  const role = profile.role === 'guardian' ? 'parent' : profile.role;
-  if (!['superadmin', 'student', 'parent'].includes(role)) return null;
+  const role = resolveInstitutionalRole(profile.role);
+  if (!role) return null;
 
   return {
     profileId: profile.id,

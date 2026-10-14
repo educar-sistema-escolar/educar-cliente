@@ -1,0 +1,31 @@
+.teacher-shell { min-height:100vh; display:flex; background:#f5f5ef; color:#243732; font-family:var(--font-hanken); }
+.teacher-sidebar { width:260px; padding:32px 22px; background:#173f36; color:#e5eee7; display:flex; flex-direction:column; flex-shrink:0; min-height:100vh; }
+.teacher-brand { display:flex; align-items:center; gap:12px; color:#fff; font-size:30px; font-weight:750; letter-spacing:-1px; }
+.teacher-brand span span { display:block; font-size:9px; letter-spacing:2px; font-weight:500; color:#b7d0c3; }
+.teacher-nav-label { margin:46px 10px 14px; font-size:9px; letter-spacing:1px; color:#b7d0c3; }
+.teacher-sidebar nav { display:grid; gap:8px; }
+.teacher-sidebar nav a { display:flex; gap:12px; align-items:center; padding:13px 15px; border-radius:12px; font-size:14px; transition:background .2s; }
+.teacher-sidebar nav a:hover { background:#ffffff12; }
+.teacher-sidebar nav a.active { background:#d8ec99; color:#173f36; font-weight:700; }
+.teacher-sidebar-bottom { margin-top:auto; padding-top:48px; }
+.teacher-web-link { display:flex; justify-content:space-between; font-size:12px; margin:0 8px 25px; }
+.teacher-account { display:flex; align-items:center; gap:10px; border-top:1px solid #ffffff25; padding:20px 0; }
+.teacher-account strong { display:block; font-size:13px; overflow-wrap:anywhere; }
+.teacher-account small { display:block; font-size:11px; color:#b7d0c3; margin-top:3px; }
+.teacher-avatar { width:38px; height:38px; border-radius:50%; background:#365c4e; display:grid; place-items:center; flex-shrink:0; }
+.teacher-logout { display:flex; gap:9px; align-items:center; font-size:12px; padding:10px; cursor:pointer; }
+.teacher-main { flex:1; min-width:0; max-width:1500px; padding:0 44px 45px; }
+.teacher-topbar { display:flex; justify-content:space-between; align-items:center; gap:15px; border-bottom:1px solid #dfe3d8; min-height:80px; font-size:12px; color:#597065; }
+.teacher-topbar>span { display:flex; align-items:center; gap:8px; font-weight:600; }
+.teacher-live-dot { width:7px; height:7px; background:#679344; border-radius:50%; }
+.teacher-hero { padding:38px 0 30px; }
+.teacher-hero>p:first-child { font-size:10px; letter-spacing:2px; font-weight:700; color:#5b795f; }
+.teacher-hero h1 { font-family:var(--font-serif); font-size:clamp(30px,4vw,44px); letter-spacing:-1px; line-height:1.15; margin:12px 0; }
+.teacher-hero>p:last-child { color:#69796f; font-size:14px; max-width:650px; line-height:1.7; }
+.teacher-state { padding:35px; border:1px dashed #cbd5c8; border-radius:18px; text-align:center; color:#69796f; background:#fff; }
+.teacher-skip { position:absolute; top:-100px; left:20px; z-index:50; background:white; padding:12px; }
+.teacher-skip:focus { top:12px; }
+.teacher-shell :focus-visible { outline:3px solid #8bb54a; outline-offset:3px; }
+.teacher-shell button:disabled { cursor:wait; opacity:.6; }
+@media(max-width:900px) { .teacher-shell { display:block; } .teacher-sidebar { width:100%; min-height:auto; padding:18px 20px; } .teacher-brand { font-size:24px; } .teacher-nav-label,.teacher-web-link,.teacher-account { display:none; } .teacher-sidebar nav { display:flex; margin-top:20px; } .teacher-sidebar nav a { flex:1; padding:12px; justify-content:center; } .teacher-sidebar-bottom { margin:0; padding:0; position:absolute; right:16px; top:20px; } .teacher-main { padding:0 20px 30px; } .teacher-topbar { min-height:62px; font-size:11px; } }
+@media(prefers-reduced-motion:reduce) { .teacher-shell * { transition:none!important; animation:none!important; } }
