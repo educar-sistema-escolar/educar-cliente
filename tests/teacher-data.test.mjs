@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { one, filterRoster, rosterCsv } from '../src/features/teacher/services/teacherUtils.ts';
+assert.equal(one([{ name: 'A' }]).name, 'A');
+assert.equal(one({ name: 'B' }).name, 'B');
+assert.equal(one(null), null);
+const roster = [{ id: '1', student: { student_number: '=123', person: { first_name: 'José', last_name: 'Pérez' } }, history: [{ term: 1, grade: 8, notes: 'Buen progreso' }] }];
+assert.equal(filterRoster(roster, 'jose').length, 1);
+assert.equal(filterRoster(roster, 'PEREZ').length, 1);
+assert.equal(filterRoster(roster, 'nothing').length, 0);
+assert.match(rosterCsv(roster), /José/);
+assert.match(rosterCsv(roster), /'=123/);
+console.log('Teacher roster and safe CSV checks passed.');
