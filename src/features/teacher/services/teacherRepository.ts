@@ -12,6 +12,7 @@ export interface TeacherSchedule {
   id: string;
   course_subject_id: string | null;
   course_id: string;
+  academic_year: number;
   day_of_week: number;
   starts_at: string;
   ends_at: string;

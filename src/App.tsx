@@ -19,6 +19,7 @@ import { CrearNoticiaPage } from './pages/admin/CrearNoticiaPage';
 import { EnrollmentRequestsPage } from './pages/admin/EnrollmentRequestsPage';
 import { OpinionModerationPage } from './pages/admin/OpinionModerationPage';
 import { CuentasDelSistemaPage } from './pages/admin/CuentasDelSistemaPage';
+import { TeacherAgendaPage } from './pages/teacher/TeacherAgendaPage';
 import { TeacherLayout } from './pages/teacher/TeacherLayout';
 import { TeacherDashboardPage } from './pages/teacher/TeacherDashboardPage';
 import { getRoleHomePath } from './features/auth/services/demoAuth';
@@ -216,6 +217,8 @@ function App() {
           }
         >
           <Route index element={<TeacherDashboardPage />} />
+          <Route path="agenda" element={<TeacherAgendaPage />} />
+          <Route path="*" element={<Navigate to="/docentes" replace />} />
         </Route>
 
         <Route path="/familias" element={

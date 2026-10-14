@@ -13,7 +13,7 @@ export function filterRoster(roster: TeacherStudent[], query: string) {
 }
 export function rosterCsv(roster: TeacherStudent[]) {
   function cell(value: string) {
-    const safe = /^[=+@\-\t\r]/.test(value) ? `'${value}` : value;
+    const safe = /^(?:\s*[=+@-]|[\t\r\n])/.test(value) ? `'${value}` : value;
     return `"${safe.replace(/"/g, '""')}"`;
   }
   return [['Estudiante', 'Legajo', 'Período', 'Nota', 'Observaciones'], ...roster.flatMap(row => {
@@ -21,4 +21,7 @@ export function rosterCsv(roster: TeacherStudent[]) {
     const records = row.history.length ? row.history : [{ term: '', grade: '', notes: '' }];
     return records.map(record => [name, row.student?.student_number ?? '', String(record.term), String(record.grade), record.notes ?? '']);
   })].map(row => row.map(cell).join(';')).join('\r\n');
+}
+export function groupSchedulesByDay<T extends { day_of_week: number; starts_at: string }>(schedules: T[]): T[][] {
+  return [1, 2, 3, 4, 5, 6, 0].map(day => schedules.filter(item => item.day_of_week === day).sort((a, b) => a.starts_at.localeCompare(b.starts_at)));
 }
