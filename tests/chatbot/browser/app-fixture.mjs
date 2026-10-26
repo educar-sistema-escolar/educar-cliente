@@ -32,6 +32,9 @@ async function createApp(page) {
         return state.authenticated ? json(authSession(state.profileId).user) : json({ message: 'Synthetic expired session' }, 401);
       }
       if (url.pathname === '/auth/v1/logout') { state.authenticated = false; return json({}); }
+      // The existing administrator landing page uses this SELECT-only RPC during setup.
+      if (state.role === 'superadmin' && request.method() === 'POST' && url.pathname === '/rest/v1/rpc/list_enrollment_requests') return json([]);
+      if (state.role === 'superadmin' && request.method() === 'GET' && url.pathname === '/rest/v1/courses') return json([]);
       if (request.method() !== 'GET') {
         state.writes.push({ path: url.pathname, method: request.method() });
         return json({ message: 'Unexpected write blocked by test boundary' }, 403);

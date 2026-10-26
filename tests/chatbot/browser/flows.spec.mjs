@@ -21,6 +21,13 @@ test('F01/F02/F03/A01/U06: personalized button-only home', async ({ app }) => {
   await expect(app.panel()).not.toContainText(/DNI|contraseña|correo electrónico/i);
 });
 
+test('F05: transport guidance -> Ver mi transporte queries the current student', async ({ app }) => {
+  await app.visit(); await app.topic('Transporte'); await app.choose('Solicitar o cambiar transporte');
+  await expect(app.panel()).toContainText(topics[0].helpText);
+  await app.choose('Ver mi transporte'); await expect(app.panel()).toContainText('Recorrido Norte');
+  expect(app.state.calls.some(call => call.table === 'student_transport_enrollments')).toBe(true);
+});
+
 for (const topic of topics) {
   test(`F03/F04/F06/D13: ${topic.name} guidance has exact copy and no invented promises`, async ({ app }) => {
     await app.visit(); await app.topic(topic.name);
@@ -31,7 +38,7 @@ for (const topic of topics) {
     await expect(app.panel().getByRole('button', { name: /confirmar|inscribirme ahora|guardar|solicitar ahora/i })).toHaveCount(0);
   });
 
-  test(`F05/D01/D02/D03/D04/D08/D09/D12/Q02/Q14: ${topic.name} displays only active own service data`, async ({ app }) => {
+  test(`D01/D02/D03/D04/D08/D09/D12/Q02/Q14: ${topic.name} direct view displays only active own service data`, async ({ app }) => {
     await app.visit(); await app.topic(topic.name); await app.choose(topic.view);
     await expect(app.panel()).toContainText(topic.intro);
     await expect(app.panel()).toContainText(topic.marker);
@@ -71,6 +78,18 @@ for (const topic of topics) {
     await expect(app.panel().getByRole('button', { name: 'Ver mis servicios', exact: true })).toBeVisible();
     await expect(app.panel()).not.toContainText(errorText);
   });
+
+  for (const mode of ['success', 'empty']) {
+    test(`D07/N03: ${topic.name}/${mode} result -> Ver mis servicios focuses the exact section`, async ({ app, page }) => {
+      await app.visit(); await app.topic(topic.name); app.state.mode = mode; await app.choose(topic.view);
+      await expect(app.panel()).toContainText(mode === 'empty' ? topic.empty : topic.intro);
+      await app.choose('Ver mis servicios'); await expect(app.panel()).toHaveCount(0);
+      await expect.poll(() => new URL(page.url()).pathname).toBe('/alumnos');
+      const target = page.getByRole('heading', { name: 'Servicios activos', exact: true });
+      await expect(target).toBeInViewport();
+      await expect.poll(() => target.evaluate(element => element === document.activeElement || element.closest('section, article')?.contains(document.activeElement))).toBe(true);
+    });
+  }
 
   for (const mode of ['error', 'network']) {
     test(`Q05/Q06/Q07/Q08: ${topic.name} ${mode} remains recoverable and never empty`, async ({ app }) => {
@@ -206,13 +225,16 @@ for (const event of ['logout', 'expired', 'account-change']) {
     app.state.delay = event !== 'expired'; app.state.mode = event === 'expired' ? 'error' : 'success';
     await app.choose('Ver mi transporte');
     await expect(app.panel()).toContainText(event === 'expired' ? errorText : 'Consultando tu información…');
+    const completed = event === 'expired' ? Promise.resolve() : serviceCompleted(page, 'student_transport_enrollments');
     if (event === 'expired') { app.state.authenticated = false; await app.choose('Reintentar'); }
     else if (event === 'logout') await page.getByRole('button', { name: /cerrar sesión/i }).click();
     else await app.changeAccount('10000000-0000-4000-8000-000000000002');
-    app.release();
+    app.release(); await completed;
     if (event !== 'account-change') await expect(page).toHaveURL(/\/login/);
     else {
-      await app.open(); await expect(app.panel()).not.toContainText(/Ana Prueba|Recorrido Norte|Plaza Norte/);
+      if (!(await app.panel().isVisible())) await app.open();
+      await expect(app.panel()).toContainText(greeting.replace('Ana Prueba', 'Bruno Prueba'));
+      await expect(app.panel()).not.toContainText(/Ana Prueba|Recorrido Norte|Plaza Norte/);
     }
   });
 }

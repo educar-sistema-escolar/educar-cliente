@@ -73,7 +73,7 @@ Dialogs use accessible name matching `Ayuda`; exact button/text labels follow th
 
 Rollback of browser unit: remove browser tests, local jsconfig, Playwright config/dependency/lock additions, added test scripts, test lint scope and artifact ignore rules. Unit characterization tests remain independently runnable. No production source or backend behavior is affected.
 
-## Frozen final verification (2026-10-26)
+## Historical verification before independent audit (2026-10-26)
 
 | Command | Result |
 |---|---|
@@ -85,6 +85,28 @@ Rollback of browser unit: remove browser tests, local jsconfig, Playwright confi
 | `npm run lint` | Same baseline 4 errors / 4 warnings, no new test/config diagnostics |
 | `git diff 468bf69..HEAD --check` | PASS after the two frontend test commits |
 
-The 76 RED browser cases reach the authenticated student portal and then fail at the missing `Ayuda` launcher. Their later assertions are **authored but not reached**, not 76 independently demonstrated chatbot defects. The five setup blocks time out during `page.goto` before DOMContentLoaded: parent/teacher/superadmin exclusion, personalized home, and transport guidance. They are not product RED and must be rerun in a stable browser environment. The six passing browser cases are unknown-role exclusion, anonymous/demo denial, inactive/suspended denial and pending-auth non-display. The earlier bounded smoke passed all four nonstudent roles and reproduced absent Ayuda; that historical smoke does not erase the final full-run setup blocks.
+In that historical snapshot, the 76 RED browser cases reach the authenticated student portal and then fail at the missing `Ayuda` launcher. Their later assertions are **authored but not reached**, not 76 independently demonstrated chatbot defects. The five setup blocks time out during `page.goto` before DOMContentLoaded: parent/teacher/superadmin exclusion, personalized home, and transport guidance. They are not product RED. The six passing browser cases are unknown-role exclusion, anonymous/demo denial, inactive/suspended denial and pending-auth non-display. The earlier bounded smoke passed all four nonstudent roles and reproduced absent Ayuda; that historical smoke does not erase the historical full-run setup blocks.
 
 Failure JSON/traces remain local and ignored. Do not report this step as a working chatbot or a completely verified frontend matrix. Its delivered artifact is a runnable, test-only contract with explicit RED and environment boundaries.
+
+## Bounded correction after independent audit
+
+The audit found that an existing administrator setup operation uses `POST /rest/v1/rpc/list_enrollment_requests`, a SELECT-only RPC, not a chatbot write. The network fixture permits **only that exact POST and GET /rest/v1/courses for superadmin setup**. Unknown RPCs and all service mutations remain rejected. The prior full-run snapshot above does not describe the corrected candidate.
+
+Added the actual F05 edge (transport guidance → Ver mi transporte) and corrected the direct-view test label. Added transport/sports × success/empty result actions to verify that Ver mis servicios closes the dialog and focuses/scrolls to Servicios activos. Q12 now registers request completion/failure before logout/account switch, waits after release, validates Bruno's greeting, then checks that Ana's identity/service data are absent. Expiration-before-retry remains a separate scenario. No sleeps or production changes were added.
+
+The corrected candidate lists **92 browser tests**. Its targeted smoke deliberately covers only role setup, personalized home, F05, result-navigation and Q12—not another full-suite run. Rollback of this correction removes only these added edge assertions and the narrow read-RPC exception; it does not remove the original test harness.
+
+The first correction smoke had 2 PASS, 9 missing-Ayuda RED and 1 fixture block: the now-permitted administrator read RPC revealed an existing GET courses baseline dependency. After explicit scope confirmation, the actual `EnrollmentRequestsPage.fetchData`, `AdminLayout` and `academicRepository.listCourses` callers were inspected; they require the two named baseline operations above and profile authentication. The courses response is narrowly role/path/method-scoped and returns valid empty rows. This is test setup, not a new chatbot capability.
+
+### Corrected candidate verification
+
+| Command | Observed result |
+|---|---|
+| `npm run test:chatbot:check` | PASS (checkJs and scoped ESLint) |
+| `npm run test:chatbot:unit` | 21 PASS / 1 genuine RED (route number); unchanged unit source |
+| `node node_modules/@playwright/test/cli.js test --list` | 92 tests in two browser spec files |
+| `node node_modules/@playwright/test/cli.js test --grep "personalized button-only home\|verified (parent\|teacher\|superadmin) account\|F05:\|result -> Ver mis servicios\|Q12" --workers=1` | 12 selected: 3 PASS (parent/teacher/superadmin), 9 RED at missing Ayuda; 0 setup blocks, 0 skipped; 1.7 minutes |
+| `git diff 468bf69..HEAD --check` | PASS after the correction commit |
+
+The grep above uses `|` as regular-expression alternation (backslashes shown in the Markdown table only escape its table separators). The nine later student-flow assertions—including newly added F05/result actions and Q12 stale-response assertions—remain authored but not reached because Ayuda is absent. No corrected full-suite count or chatbot implementation success is claimed. Backend API/pgTAP environment limitations are unchanged by this frontend-only correction.
