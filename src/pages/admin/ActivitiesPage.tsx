@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
+import { useAccessibleDialog } from '../../shared/hooks/useAccessibleDialog';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -37,7 +38,7 @@ const emptyForm: ActivityInput = {
 };
 
 export const ActivitiesPage: React.FC = () => {
-  const [version, setVersion] = useState(0);
+  const [, setVersion] = useState(0);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<ActivityCategory | 'all'>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -46,8 +47,9 @@ export const ActivitiesPage: React.FC = () => {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showEnrolleesFor, setShowEnrolleesFor] = useState<string | null>(null);
+  const deleteDialogRef = useAccessibleDialog<HTMLDivElement>(Boolean(deleteConfirm), () => setDeleteConfirm(null));
 
-  const activities = useMemo(() => listActivities(), [version]);
+  const activities = listActivities();
 
   const filtered = activities.filter(a => {
     const matchSearch = a.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -247,6 +249,7 @@ export const ActivitiesPage: React.FC = () => {
                   </div>
                   <button
                     type="button"
+                    aria-label="Cerrar lista de inscriptos"
                     onClick={() => setShowEnrolleesFor(null)}
                     className="cursor-pointer rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
                   >
@@ -332,11 +335,11 @@ export const ActivitiesPage: React.FC = () => {
 
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-edu-border bg-white p-5 shadow-2xl text-center space-y-4">
+          <div ref={deleteDialogRef} className="w-full max-w-sm rounded-2xl border border-edu-border bg-white p-5 shadow-2xl text-center space-y-4" role="dialog" aria-modal="true" aria-labelledby="delete-activity-title">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-50 to-red-100 text-red-600 shadow-sm">
               <AlertTriangle className="h-6 w-6" />
             </div>
-            <h3 className="text-sm font-bold text-slate-800">¿Eliminar actividad?</h3>
+            <h3 id="delete-activity-title" className="text-sm font-bold text-slate-800">¿Eliminar actividad?</h3>
             <p className="text-xs text-edu-muted">Esta acción no se puede deshacer.</p>
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={() => setDeleteConfirm(null)} className="flex-1 h-10 cursor-pointer rounded-xl border border-edu-border bg-white text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50">Cancelar</button>

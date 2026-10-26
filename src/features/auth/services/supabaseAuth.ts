@@ -1,3 +1,4 @@
+import { withAuthTimeout } from './authTimeout';
 import type { AuthSession } from '../types';
 import { supabase, requireSupabase } from './supabaseClient';
 import { resolveInstitutionalRole } from './institutionalRole';
@@ -17,6 +18,11 @@ interface AuthenticatedProfile {
 }
 
 export async function getSupabaseAccountSession(): Promise<SupabaseAccountSession | null> {
+  try { return await withAuthTimeout(readAccountSession()); }
+  catch { return null; }
+}
+
+async function readAccountSession(): Promise<SupabaseAccountSession | null> {
   if (!supabase) return null;
 
   const client = requireSupabase();
@@ -50,16 +56,21 @@ export async function getSupabaseAccountSession(): Promise<SupabaseAccountSessio
 }
 
 export async function loginInstitutionalUser(email: string, password: string): Promise<SupabaseAccountSession> {
-  const { error } = await requireSupabase().auth.signInWithPassword({
+  const { error } = await withAuthTimeout(requireSupabase().auth.signInWithPassword({
     email: email.trim().toLowerCase(),
     password,
-  });
-  if (error) throw new Error('No se pudo validar el acceso. Revisá tus credenciales o contactá a la institución.');
+  }));
+  if (error) {
+    if (error.name === 'AuthRetryableFetchError' || error.status === 0) {
+      throw new Error('No se pudo conectar con el servidor. Verificá tu conexión e intentá nuevamente.');
+    }
+    throw new Error('No se pudo validar el acceso. Revisá tus credenciales o contactá a la institución.');
+  }
 
   const session = await getSupabaseAccountSession();
   if (session) return session;
 
-  await requireSupabase().auth.signOut();
+  await withAuthTimeout(requireSupabase().auth.signOut());
   throw new Error('La cuenta no tiene un portal institucional habilitado. Contactá a administración.');
 }
 
@@ -71,25 +82,27 @@ export async function getSupabaseAdminSession(): Promise<AuthSession | null> {
 export async function loginSuperadmin(email: string, password: string): Promise<AuthSession> {
   const session = await loginInstitutionalUser(email, password);
   if (session.role !== 'superadmin') {
-    await requireSupabase().auth.signOut();
+    await withAuthTimeout(requireSupabase().auth.signOut());
     throw new Error('La cuenta no tiene acceso administrativo activo.');
   }
   return session;
 }
 
 export async function signOutSupabase() {
-  if (supabase) await supabase.auth.signOut();
+  if (!supabase) return;
+  const { error } = await withAuthTimeout(supabase.auth.signOut());
+  if (error) throw error;
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
-  const { error } = await requireSupabase().auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+  const { error } = await withAuthTimeout(requireSupabase().auth.resetPasswordForEmail(email.trim().toLowerCase(), {
     redirectTo: `${window.location.origin}/login?mode=reset`,
-  });
+  }));
   if (error) throw new Error(error.message);
 }
 
 export async function updateSupabasePassword(password: string): Promise<void> {
-  const { error } = await requireSupabase().auth.updateUser({ password });
+  const { error } = await withAuthTimeout(requireSupabase().auth.updateUser({ password }));
   if (error) throw new Error(error.message);
 }
 

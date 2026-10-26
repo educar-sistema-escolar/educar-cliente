@@ -550,7 +550,7 @@ export const EnrollmentPage: React.FC = () => {
 
   if (step === 5) {
     return (
-      <main className="min-h-screen bg-[#F4F0E8] px-4 py-10 font-sans text-[#18304D] md:py-16">
+      <section className="min-h-screen bg-[#F4F0E8] px-4 py-10 font-sans text-[#18304D] md:py-16">
         <section className="mx-auto grid min-h-[620px] max-w-[760px] place-items-center rounded-[20px] bg-[radial-gradient(circle_at_center,#fff_0%,#fff_45%,#F4F0E8_100%)] px-4">
           <div className="w-full max-w-[520px] rounded-[24px] bg-white px-7 py-10 text-center shadow-[0_24px_70px_rgba(24,48,77,0.13)] md:px-12 md:py-12">
             <div className="relative mx-auto mb-7 grid h-28 w-28 place-items-center">
@@ -594,12 +594,12 @@ export const EnrollmentPage: React.FC = () => {
             </div>
           </div>
         </section>
-      </main>
+      </section>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#F4F0E8] font-sans text-[#18304D]">
+    <section className="min-h-screen bg-[#F4F0E8] font-sans text-[#18304D]">
       <div className="mx-auto max-w-[1180px] px-3 pb-10 md:px-4 md:pt-4">
         <StepHero activeStep={step} />
 
@@ -823,6 +823,6 @@ export const EnrollmentPage: React.FC = () => {
           <SidePanel />
         </section>
       </div>
-    </main>
+    </section>
   );
 };

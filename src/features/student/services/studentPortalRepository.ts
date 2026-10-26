@@ -9,6 +9,7 @@ export interface PortalCourse {
   yearNumber: number | null;
   division: string | null;
   shift: string | null;
+  levelId: string | null;
   level: string | null;
 }
 
@@ -63,7 +64,7 @@ interface CourseEnrollmentRow {
     year_number: number | null;
     division: string | null;
     shift: string | null;
-    educational_level: Join<{ name: string }>;
+    educational_level: Join<{ id: string; name: string }>;
   }>;
 }
 
@@ -140,7 +141,7 @@ async function loadStudent(student: StudentRow, relationship: string | null): Pr
   const [coursesResult, subjectsResult, sportsResult, transportResult, diningResult] = await Promise.all([
     supabase
       .from('student_enrollments')
-      .select('id,academic_year,course_id,course:courses(id,name,academic_year,year_number,division,shift,educational_level:educational_levels(name))')
+      .select('id,academic_year,course_id,course:courses(id,name,academic_year,year_number,division,shift,educational_level:educational_levels(id,name))')
       .eq('student_id', student.id)
       .eq('is_active', true)
       .order('academic_year', { ascending: false }),
@@ -252,6 +253,7 @@ async function loadStudent(student: StudentRow, relationship: string | null): Pr
         yearNumber: course.year_number,
         division: course.division,
         shift: course.shift,
+        levelId: level?.id ?? null,
         level: level?.name ?? null,
       }];
     }),

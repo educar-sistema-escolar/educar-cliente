@@ -64,3 +64,10 @@ export async function loadTeacherSchedules(assignments: TeacherAssignment[]): Pr
   return (result.data ?? []).filter(row => assignments.some(assignment => assignment.academic_year === row.academic_year &&
     (row.course_subject_id === assignment.id || (!row.course_subject_id && row.course_id === assignment.course_id))));
 }
+
+/** Uses the institutional person record without changing authentication or profile data. */
+export async function loadTeacherDisplayName(profileId: string): Promise<string | null> {
+  const { data, error } = await requireSupabase().from('people').select('first_name,last_name').eq('profile_id', profileId).eq('is_active', true).maybeSingle();
+  check(error);
+  return data ? [data.first_name, data.last_name].filter(Boolean).join(' ') || null : null;
+}

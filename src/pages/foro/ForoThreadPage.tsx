@@ -125,7 +125,7 @@ export const ForoThreadPage: React.FC = () => {
   };
 
   if (isLoading) {
-    return <div className="py-20 text-center text-slate-400" role="status">Cargando discusión...</div>;
+    return <div className="py-20 text-center text-slate-500" role="status">Cargando discusión...</div>;
   }
 
   if (!discussion) {
@@ -174,7 +174,7 @@ export const ForoThreadPage: React.FC = () => {
                 </div>
                 <div className="text-left">
                   <p className="text-xs font-bold text-slate-800 leading-none">{discussion.authorName}</p>
-                  <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wide">
+                  <p className="text-[10px] text-slate-500 font-medium mt-1 uppercase tracking-wide">
                     {discussion.authorRole} • {discussion.date}
                   </p>
                 </div>
@@ -201,14 +201,14 @@ export const ForoThreadPage: React.FC = () => {
                   aria-label="Votar a favor de la discusión"
                   aria-pressed={discussion.userVoted === 'up'}
                   className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
-                    discussion.userVoted === 'up' ? 'text-green-600' : 'text-slate-400'
+                    discussion.userVoted === 'up' ? 'text-green-700' : 'text-slate-500'
                   } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                   title="Me gusta"
                 >
                   <ChevronUp size={16} />
                 </button>
                 <span className={`text-[11px] font-bold px-1.5 min-w-[20px] text-center ${
-                  discussion.userVoted === 'up' ? 'text-green-600' : discussion.userVoted === 'down' ? 'text-red-500' : 'text-slate-600'
+                  discussion.userVoted === 'up' ? 'text-green-700' : discussion.userVoted === 'down' ? 'text-red-700' : 'text-slate-600'
                 }`}>
                   {discussion.score}
                 </span>
@@ -218,7 +218,7 @@ export const ForoThreadPage: React.FC = () => {
                   aria-label="Votar en contra de la discusión"
                   aria-pressed={discussion.userVoted === 'down'}
                   className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
-                    discussion.userVoted === 'down' ? 'text-red-500' : 'text-slate-400'
+                    discussion.userVoted === 'down' ? 'text-red-700' : 'text-slate-500'
                   } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                   title="No me gusta"
                 >
@@ -226,7 +226,7 @@ export const ForoThreadPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-center gap-4 text-slate-400 text-[10px] font-bold uppercase">
+              <div className="flex items-center gap-4 text-slate-500 text-[10px] font-bold uppercase">
                 <div className="flex items-center gap-1">
                   <MessageSquare size={13} />
                   <span>{discussion.repliesCount} Comentarios</span>
@@ -248,7 +248,7 @@ export const ForoThreadPage: React.FC = () => {
                 onChange={(e) => setNewReplyContent(e.target.value)}
                 placeholder="Escribe tu aporte, consejo o pregunta sobre este tema..."
                 maxLength={2000}
-                className="w-full bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg p-3 text-xs text-slate-700 focus:outline-none min-h-[80px] resize-none placeholder:text-slate-400"
+                className="w-full bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg p-3 text-xs text-slate-700 focus:outline-none min-h-[80px] resize-none placeholder:text-slate-500"
                 required
               />
               <div className="flex justify-end">
@@ -268,7 +268,7 @@ export const ForoThreadPage: React.FC = () => {
           <section className="space-y-4">
             
             {rootReplies.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-xs">
+              <div className="py-8 text-center text-slate-500 text-xs">
                 Aún no hay comentarios. Sé el primero en responder.
               </div>
             ) : (
@@ -287,9 +287,9 @@ export const ForoThreadPage: React.FC = () => {
                           </div>
                           <div className="text-left">
                             <p className="text-xs font-bold text-slate-800 leading-none">
-                              {reply.authorName} <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide ml-2 bg-slate-50 px-1.5 py-0.5 rounded">{reply.authorRole}</span>
+                              {reply.authorName} <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide ml-2 bg-slate-50 px-1.5 py-0.5 rounded">{reply.authorRole}</span>
                             </p>
-                            <p className="text-[9px] text-slate-400 mt-1">{reply.date}</p>
+                            <p className="text-[9px] text-slate-500 mt-1">{reply.date}</p>
                           </div>
                         </div>
 
@@ -301,13 +301,13 @@ export const ForoThreadPage: React.FC = () => {
                             aria-label={`Votar a favor de la respuesta de ${reply.authorName}`}
                             aria-pressed={reply.userVoted === 'up'}
                             className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
-                              reply.userVoted === 'up' ? 'text-green-600' : 'text-slate-400'
+                              reply.userVoted === 'up' ? 'text-green-700' : 'text-slate-500'
                             } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                           >
                             <ChevronUp size={14} />
                           </button>
                           <span className={`text-[10px] font-bold px-1 min-w-[12px] text-center ${
-                            reply.userVoted === 'up' ? 'text-green-600' : reply.userVoted === 'down' ? 'text-red-500' : 'text-slate-600'
+                            reply.userVoted === 'up' ? 'text-green-700' : reply.userVoted === 'down' ? 'text-red-700' : 'text-slate-600'
                           }`}>
                             {reply.score}
                           </span>
@@ -317,7 +317,7 @@ export const ForoThreadPage: React.FC = () => {
                             aria-label={`Votar en contra de la respuesta de ${reply.authorName}`}
                             aria-pressed={reply.userVoted === 'down'}
                             className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
-                              reply.userVoted === 'down' ? 'text-red-500' : 'text-slate-400'
+                              reply.userVoted === 'down' ? 'text-red-700' : 'text-slate-500'
                             } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                           >
                             <ChevronDown size={14} />
@@ -329,7 +329,7 @@ export const ForoThreadPage: React.FC = () => {
                         {reply.content}
                       </p>
 
-                      <div className="pl-10 flex gap-4 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                      <div className="pl-10 flex gap-4 text-[9px] font-bold uppercase tracking-wider text-slate-500">
                         <button
                           type="button"
                           onClick={() => {
@@ -382,9 +382,9 @@ export const ForoThreadPage: React.FC = () => {
                             </div>
                             <div className="text-left">
                               <p className="text-xs font-bold text-slate-800 leading-none">
-                                {nestReply.authorName} <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wide ml-1 bg-white px-1 py-0.5 rounded border border-slate-100">{nestReply.authorRole}</span>
+                                {nestReply.authorName} <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wide ml-1 bg-white px-1 py-0.5 rounded border border-slate-100">{nestReply.authorRole}</span>
                               </p>
-                              <p className="text-[9px] text-slate-400 mt-1">{nestReply.date}</p>
+                              <p className="text-[9px] text-slate-500 mt-1">{nestReply.date}</p>
                             </div>
                           </div>
 
@@ -396,13 +396,13 @@ export const ForoThreadPage: React.FC = () => {
                               aria-label={`Votar a favor de la respuesta de ${nestReply.authorName}`}
                               aria-pressed={nestReply.userVoted === 'up'}
                               className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
-                                nestReply.userVoted === 'up' ? 'text-green-600' : 'text-slate-400'
+                                nestReply.userVoted === 'up' ? 'text-green-700' : 'text-slate-500'
                               } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                             >
                               <ChevronUp size={12} />
                             </button>
                             <span className={`text-[9px] font-bold px-1 min-w-[10px] text-center ${
-                              nestReply.userVoted === 'up' ? 'text-green-600' : nestReply.userVoted === 'down' ? 'text-red-500' : 'text-slate-500'
+                              nestReply.userVoted === 'up' ? 'text-green-700' : nestReply.userVoted === 'down' ? 'text-red-700' : 'text-slate-500'
                             }`}>
                               {nestReply.score}
                             </span>
@@ -412,7 +412,7 @@ export const ForoThreadPage: React.FC = () => {
                               aria-label={`Votar en contra de la respuesta de ${nestReply.authorName}`}
                               aria-pressed={nestReply.userVoted === 'down'}
                               className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
-                                nestReply.userVoted === 'down' ? 'text-red-500' : 'text-slate-400'
+                                nestReply.userVoted === 'down' ? 'text-red-700' : 'text-slate-500'
                               } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                             >
                               <ChevronDown size={12} />

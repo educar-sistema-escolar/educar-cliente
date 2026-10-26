@@ -1,27 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { MainLayout } from './shared/components/layout/MainLayout';
-import { HomePage } from './pages/home/HomePage';
-import { AboutPage } from './pages/about/AboutPage';
-import { LevelsPage } from './pages/levels/LevelsPage';
-import { BienestarPage } from './pages/BienestarPage';
-import { NewsPage } from './pages/news/NewsPage';
-import { JobsPage } from './pages/jobs/JobsPage';
-import { LoginPage } from './pages/login/LoginPage';
-import { EnrollmentPage } from './pages/enrollment/EnrollmentPage';
-import { OpinionsPage } from './pages/opiniones/OpinionsPage';
-import { RegistrationPage } from './pages/registration/RegistrationPage';
-import { CommentsModerationPage } from './pages/admin/CommentsModerationPage';
 import { ScrollToTop } from './shared/components/ScrollToTop';
 import { AdminLayout } from './pages/admin/AdminLayout';
-import { GestionNoticiasPage } from './pages/admin/GestionNoticiasPage';
-import { CrearNoticiaPage } from './pages/admin/CrearNoticiaPage';
-import { EnrollmentRequestsPage } from './pages/admin/EnrollmentRequestsPage';
-import { OpinionModerationPage } from './pages/admin/OpinionModerationPage';
-import { CuentasDelSistemaPage } from './pages/admin/CuentasDelSistemaPage';
-import { TeacherAgendaPage } from './pages/teacher/TeacherAgendaPage';
 import { TeacherLayout } from './pages/teacher/TeacherLayout';
-import { TeacherDashboardPage } from './pages/teacher/TeacherDashboardPage';
 import { getRoleHomePath } from './features/auth/services/demoAuth';
 
 import {
@@ -29,17 +11,36 @@ import {
   subscribeToSupabaseAuth,
   type SupabaseAccountSession,
 } from './features/auth/services/supabaseAuth';
-import { AcademicMasterDataPage } from './pages/admin/AcademicMasterDataPage';
-import { PermisosPage } from './pages/admin/PermisosPage';
-import { AcademicRecordsPage } from './pages/admin/AcademicRecordsPage';
-import { ServiciosPage } from './pages/admin/ServiciosPage';
-import { BillingPage } from './pages/admin/BillingPage';
-import { ReportsPage } from './pages/admin/ReportsPage';
-import { StudentPortalPage } from './pages/student/StudentPortalPage';
 import { StudentPortalLayout } from './pages/student/StudentPortalLayout';
 import { ForoLayout } from './pages/foro/ForoLayout';
-import { ForoFeedPage } from './pages/foro/ForoFeedPage';
-import { ForoThreadPage } from './pages/foro/ForoThreadPage';
+
+const HomePage = lazy(() => import('./pages/home/HomePage').then((module) => ({ default: module.HomePage })));
+const AboutPage = lazy(() => import('./pages/about/AboutPage').then((module) => ({ default: module.AboutPage })));
+const LevelsPage = lazy(() => import('./pages/levels/LevelsPage').then((module) => ({ default: module.LevelsPage })));
+const BienestarPage = lazy(() => import('./pages/BienestarPage').then((module) => ({ default: module.BienestarPage })));
+const NewsPage = lazy(() => import('./pages/news/NewsPage').then((module) => ({ default: module.NewsPage })));
+const JobsPage = lazy(() => import('./pages/jobs/JobsPage').then((module) => ({ default: module.JobsPage })));
+const LoginPage = lazy(() => import('./pages/login/LoginPage').then((module) => ({ default: module.LoginPage })));
+const EnrollmentPage = lazy(() => import('./pages/enrollment/EnrollmentPage').then((module) => ({ default: module.EnrollmentPage })));
+const OpinionsPage = lazy(() => import('./pages/opiniones/OpinionsPage').then((module) => ({ default: module.OpinionsPage })));
+const RegistrationPage = lazy(() => import('./pages/registration/RegistrationPage').then((module) => ({ default: module.RegistrationPage })));
+const CommentsModerationPage = lazy(() => import('./pages/admin/CommentsModerationPage').then((module) => ({ default: module.CommentsModerationPage })));
+const GestionNoticiasPage = lazy(() => import('./pages/admin/GestionNoticiasPage').then((module) => ({ default: module.GestionNoticiasPage })));
+const CrearNoticiaPage = lazy(() => import('./pages/admin/CrearNoticiaPage').then((module) => ({ default: module.CrearNoticiaPage })));
+const EnrollmentRequestsPage = lazy(() => import('./pages/admin/EnrollmentRequestsPage').then((module) => ({ default: module.EnrollmentRequestsPage })));
+const OpinionModerationPage = lazy(() => import('./pages/admin/OpinionModerationPage').then((module) => ({ default: module.OpinionModerationPage })));
+const CuentasDelSistemaPage = lazy(() => import('./pages/admin/CuentasDelSistemaPage').then((module) => ({ default: module.CuentasDelSistemaPage })));
+const TeacherAgendaPage = lazy(() => import('./pages/teacher/TeacherAgendaPage').then((module) => ({ default: module.TeacherAgendaPage })));
+const TeacherDashboardPage = lazy(() => import('./pages/teacher/TeacherDashboardPage').then((module) => ({ default: module.TeacherDashboardPage })));
+const AcademicMasterDataPage = lazy(() => import('./pages/admin/AcademicMasterDataPage').then((module) => ({ default: module.AcademicMasterDataPage })));
+const PermisosPage = lazy(() => import('./pages/admin/PermisosPage').then((module) => ({ default: module.PermisosPage })));
+const AcademicRecordsPage = lazy(() => import('./pages/admin/AcademicRecordsPage').then((module) => ({ default: module.AcademicRecordsPage })));
+const ServiciosPage = lazy(() => import('./pages/admin/ServiciosPage').then((module) => ({ default: module.ServiciosPage })));
+const BillingPage = lazy(() => import('./pages/admin/BillingPage').then((module) => ({ default: module.BillingPage })));
+const ReportsPage = lazy(() => import('./pages/admin/ReportsPage').then((module) => ({ default: module.ReportsPage })));
+const StudentPortalPage = lazy(() => import('./pages/student/StudentPortalPage').then((module) => ({ default: module.StudentPortalPage })));
+const ForoFeedPage = lazy(() => import('./pages/foro/ForoFeedPage').then((module) => ({ default: module.ForoFeedPage })));
+const ForoThreadPage = lazy(() => import('./pages/foro/ForoThreadPage').then((module) => ({ default: module.ForoThreadPage })));
 
 const PublicLayout = () => (
   <MainLayout>
@@ -145,6 +146,7 @@ function App() {
     <Router>
       <ScrollToTop />
 
+      <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-600" role="status" aria-live="polite">Cargando pantalla…</div>}>
       <Routes>
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
@@ -229,6 +231,7 @@ function App() {
           <Route index element={<StudentPortalPage audience="family" />} />
         </Route>
       </Routes>
+      </Suspense>
     </Router>
   );
 }

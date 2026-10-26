@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -33,8 +33,8 @@ export const OpinionsPage: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [version, setVersion] = useState(0);
-  const approvedOpinions = useMemo(() => listApprovedOpinions(), [version]);
+  const [, setVersion] = useState(0);
+  const approvedOpinions = listApprovedOpinions();
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -65,7 +65,7 @@ export const OpinionsPage: React.FC = () => {
     });
 
     setSuccess(
-      'Gracias por compartir tu experiencia. La opinion quedo pendiente de revision institucional.',
+      'La opinión quedó guardada solo en este navegador para la demostración. No se envió a Supabase ni a la institución.',
     );
     setFormData({
       displayName: '',
@@ -111,11 +111,15 @@ export const OpinionsPage: React.FC = () => {
           )}
 
           {success && (
-            <div className="mb-4 flex items-start gap-2 rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="mb-4 flex items-start gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900" role="status">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <span>{success}</span>
             </div>
           )}
+
+          <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-950" role="note">
+            Modo demostración: las opiniones y su moderación se almacenan en el navegador actual. No forman parte de los datos compartidos de Supabase.
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <label className="space-y-1.5">

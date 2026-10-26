@@ -1,0 +1,86 @@
+/* Institutional tokens are scoped so the public website keeps its existing identity. */
+.institutional-shell {
+  --color-edu-primary: #0046aa;
+  --color-edu-secondary: #2563eb;
+  --color-edu-secondary-dark: #1d4ed8;
+  --color-edu-light: #dbeafe;
+  --color-edu-bg: #f5f7fb;
+  --color-edu-card: #ffffff;
+  --color-edu-muted: #475569;
+  --edu-space-2: 8px;
+  --edu-space-3: 12px;
+  --edu-space-4: 16px;
+  --edu-space-6: 24px;
+  --edu-radius: 12px;
+  --edu-shadow: 0 2px 8px rgb(15 23 42 / 4%);
+  min-height: 100vh; background: var(--color-edu-bg); color: #1e293b; font-family: var(--font-sans);
+}
+.institutional-shell *, .institutional-shell *::before, .institutional-shell *::after { box-sizing: border-box; }
+.institutional-shell :is(h1,h2,h3,h4) { font-family: var(--font-sans); overflow-wrap: anywhere; }
+.institutional-shell :focus-visible { outline: 3px solid var(--color-edu-secondary); outline-offset: 3px; }
+.institutional-sidebar, .institutional-drawer-content { display: flex; flex-direction: column; background: var(--color-edu-primary); color: white; }
+.institutional-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 30; width: 256px; }
+.institutional-brand { display: flex; align-items: center; gap: var(--edu-space-3); min-height: 88px; padding: 20px; border-bottom: 1px solid #ffffff30; }
+.institutional-brand img { border-radius: var(--edu-radius); }
+.institutional-brand strong { display: block; font-size: 18px; }
+.institutional-brand small { display: block; margin-top: 4px; font-size: 11px; color: #dbeafe; }
+.institutional-shell nav[aria-label^="Navegación de"] { flex: 1; overflow-y: auto; padding: 16px 12px; }
+.institutional-shell nav[aria-label^="Navegación de"] a, .institutional-community summary { display: flex; align-items: center; gap: var(--edu-space-3); min-height: 44px; margin-bottom: 4px; padding: 10px 12px; border-radius: var(--edu-radius); font-size: 13px; font-weight: 600; color: #eff6ff; cursor: pointer; }
+.institutional-shell nav[aria-label^="Navegación de"] a:hover, .institutional-community summary:hover { background: #ffffff18; }
+.institutional-shell nav[aria-label^="Navegación de"] a.active { background: #dbeafe; color: #003b91; box-shadow: var(--edu-shadow); }
+.institutional-shell nav svg { flex-shrink: 0; }
+.institutional-community { border-top: 1px solid #ffffff30; padding-top: 8px; margin-top: 12px; }
+.institutional-community summary { list-style: none; }
+.institutional-community summary::-webkit-details-marker { display: none; }
+.institutional-community a { margin-left: 12px; }
+.institutional-badge { margin-left: auto; border-radius: 20px; padding: 2px 8px; background: white; color: #003b91; }
+.institutional-account { padding: 16px; border-top: 1px solid #ffffff30; overflow-wrap: anywhere; }
+.institutional-account strong, .institutional-account span, .institutional-account small { display: block; font-size: 12px; }
+.institutional-account span, .institutional-account small { color: #dbeafe; margin-top: 4px; }
+.institutional-account button { display: flex; align-items: center; gap: 10px; margin-top: 12px; width: 100%; min-height: 44px; border-radius: var(--edu-radius); padding: 10px; background: #ffffff12; color: white; font-size: 13px; cursor: pointer; }
+.institutional-account button:hover { background: #ffffff25; }
+.institutional-workspace { min-width: 0; margin-left: 256px; }
+.institutional-header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: var(--edu-space-4); min-height: 72px; padding: 12px 24px; background: var(--color-edu-primary); color: white; box-shadow: var(--edu-shadow); }
+.institutional-header :is(button,a) { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; border-radius: var(--edu-radius); cursor: pointer; }
+.institutional-header :is(button,a):hover { background: #ffffff20; }
+.institutional-section-title { flex: 1; min-width: 0; }
+.institutional-section-title strong { display: block; font-size: 15px; overflow-wrap: anywhere; }
+.institutional-section-title span { display: block; font-size: 11px; color: #dbeafe; margin-top: 3px; }
+.institutional-role { border: 1px solid #ffffff50; border-radius: 20px; padding: 6px 12px; font-size: 12px; }
+.institutional-header .institutional-menu-trigger { display: none; }
+.institutional-content { padding: var(--edu-space-6); max-width: 1600px; margin: 0 auto; min-width: 0; }
+.institutional-content :is(article,section,div)[class*="shadow-sm"] { box-shadow: var(--edu-shadow); }
+.institutional-content :is(button,select,input:not([type=checkbox]):not([type=radio])) { min-height: 44px; }
+.institutional-content :is(input,select,textarea) { max-width: 100%; }
+.institutional-content :is(button,a) { touch-action: manipulation; }
+.institutional-content button:not(:disabled) { cursor: pointer; }
+.institutional-content button:active:not(:disabled) { filter: brightness(.94); }
+.institutional-content table { white-space: nowrap; }
+.institutional-content .edu-button--primary { background: var(--color-edu-secondary); }
+.institutional-content .edu-button--primary:hover { background: var(--color-edu-secondary-dark); }
+.institutional-sidebar :focus-visible, .institutional-header :focus-visible, .institutional-drawer :focus-visible { outline-color: white; }
+.institutional-skip { position: fixed; top: -100px; left: 16px; z-index: 100; padding: 12px; background: white; color: #0046aa; border-radius: var(--edu-radius); }
+.institutional-skip:focus { top: 12px; }
+.institutional-drawer { margin: 0; padding: 0; border: 0; width: min(320px, 90vw); max-width: 90vw; height: 100dvh; max-height: 100dvh; background: var(--color-edu-primary); color: white; }
+.institutional-drawer::backdrop { background: #0f172a99; }
+.institutional-drawer-content { min-height: 100%; height: 100%; }
+.institutional-close { align-self: flex-end; min-height: 44px; min-width: 44px; display: grid; place-items: center; margin: 8px 8px 0; border-radius: var(--edu-radius); cursor: pointer; }
+body:has(.institutional-drawer[open]) { overflow: hidden; }
+@media (max-width: 767px) {
+  .institutional-sidebar { display: none; }
+  .institutional-workspace { margin-left: 0; }
+  .institutional-header { gap: 8px; padding: 10px 12px; }
+  .institutional-header .institutional-menu-trigger { display: inline-flex; }
+  .institutional-header .institutional-web { display: none; }
+  .institutional-section-title strong { font-size: 14px; }
+  .institutional-role { font-size: 11px; padding: 6px 8px; max-width: 110px; }
+  .institutional-content { padding: 20px 16px; }
+}
+
+/* Strengthen secondary text and field boundaries within authenticated panels. */
+.institutional-content :is(.text-slate-400,.text-gray-400) { color: var(--color-edu-muted); }
+.institutional-content :is(input,select,textarea)[class*="border"], .teacher-year select, .teacher-search { border-color: #7c8ba1; }
+.institutional-content :is(input,select,textarea):disabled { opacity: .6; }
+.teacher-summary span:not(.teacher-summary-icon), .teacher-eyebrow, .teacher-year,
+.teacher-course-info small, .teacher-student summary small, .teacher-record-count,
+.teacher-readonly-note, .teacher-count, .teacher-day header small, .teacher-day header>span { font-size:12px; }

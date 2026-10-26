@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, Download, Search, Users, RefreshCw, FileCheck2 } 
 import type { SupabaseAccountSession } from '../../features/auth/services/supabaseAuth';
 import { loadTeacherAssignments, loadTeacherRoster, type TeacherAssignment } from '../../features/teacher/services/teacherRepository';
 import { filterRoster, rosterCsv, type TeacherStudent } from '../../features/teacher/services/teacherUtils';
+import { educationalLevelLabel } from '../../shared/utils/educationalLevelLabel';
 
 export function TeacherDashboardPage() {
   const session = useOutletContext<SupabaseAccountSession>();
@@ -38,8 +39,8 @@ export function TeacherDashboardPage() {
     </div></div>
     {loading ? <div className="teacher-state" role="status">Cargando tus materias institucionales…</div> : error ? <div className="teacher-state" role="alert"><p>{error}</p><button className="teacher-button" onClick={reload}>Volver a intentar</button></div> : !assignments.length ?
       <div className="teacher-state"><BookOpen size={32} className="teacher-empty-icon" /><h3>Tu espacio está listo</h3><p>Aún no tienes materias asignadas. Solicita a administración que vincule tu cuenta docente a los cursos y materias correspondientes.</p></div> :
-      <div className="teacher-workspace"><div className="teacher-course-list" aria-label="Materias asignadas">{visible.map((item, index) => <button key={item.id} className={`teacher-course-card ${selected?.id === item.id ? 'selected' : ''}`} onClick={() => setSelectedId(item.id)} aria-pressed={selected?.id === item.id}>
-        <span className="teacher-course-number">{String(index + 1).padStart(2, '0')}</span><span className="teacher-course-info"><small>{item.course?.level?.name || 'Curso'} · {item.academic_year}</small><strong>{item.subject?.name || 'Materia sin nombre disponible'}</strong><span>{item.course?.name || 'Curso no disponible'}{item.course?.division ? ` · ${item.course.division}` : ''}</span></span><ArrowRight size={17} />
+      <div className="teacher-workspace"><div className="teacher-course-list" role="group" aria-label="Materias asignadas">{visible.map((item, index) => <button key={item.id} className={`teacher-course-card ${selected?.id === item.id ? 'selected' : ''}`} onClick={() => setSelectedId(item.id)} aria-pressed={selected?.id === item.id}>
+        <span className="teacher-course-number">{String(index + 1).padStart(2, '0')}</span><span className="teacher-course-info"><small>{educationalLevelLabel(item.course?.level?.name) || 'Curso'} · {item.academic_year}</small><strong>{item.subject?.name || 'Materia sin nombre disponible'}</strong><span>{item.course?.name || 'Curso no disponible'}{item.course?.division ? ` · ${item.course.division}` : ''}</span></span><ArrowRight size={17} />
       </button>)}</div>{selected && <RosterPanel key={`${selected.id}-${revision}`} assignment={selected} />}</div>}
   </>;
 }

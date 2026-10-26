@@ -25,6 +25,7 @@ import {
 } from '../../features/inscripcion/services/enrollmentStore';
 import type { EnrollmentRequest, EnrollmentStatus } from '../../features/inscripcion/types';
 import { toUserFacingError } from '../../shared/utils/userFacingError';
+import { useAccessibleDialog } from '../../shared/hooks/useAccessibleDialog';
 
 const statusLabels: Record<EnrollmentStatus, string> = {
   pending: 'Nueva solicitud',
@@ -74,6 +75,8 @@ export const EnrollmentRequestsPage: React.FC = () => {
     type: 'reject' | 'archive';
     request: EnrollmentRequest;
   } | null>(null);
+  const approvalDialogRef = useAccessibleDialog<HTMLDivElement>(Boolean(approvalRequest), () => setApprovalRequest(null));
+  const confirmDialogRef = useAccessibleDialog<HTMLDivElement>(Boolean(confirmAction), () => setConfirmAction(null));
 
   const fetchData = useCallback(() => Promise.all([
     listEnrollmentRequests(),
@@ -349,13 +352,13 @@ export const EnrollmentRequestsPage: React.FC = () => {
 
       {approvalRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-edu-border bg-white p-5 shadow-2xl">
+          <div ref={approvalDialogRef} className="w-full max-w-md rounded-2xl border border-edu-border bg-white p-5 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="approval-dialog-title">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-800">Aprobar inscripción</h3>
+                <h3 id="approval-dialog-title" className="text-sm font-bold text-slate-800">Aprobar inscripción</h3>
                 <p className="mt-1 text-xs text-edu-muted">Elegí el curso activo del año {approvalRequest.academicYear}.</p>
               </div>
-              <button type="button" onClick={() => setApprovalRequest(null)} className="rounded-lg p-1.5 text-edu-muted hover:bg-slate-100"><X size={16} /></button>
+              <button type="button" aria-label="Cerrar aprobación" onClick={() => setApprovalRequest(null)} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg p-1.5 text-edu-muted hover:bg-slate-100"><X size={16} aria-hidden="true" /></button>
             </div>
             <label className="mt-5 block text-xs font-semibold text-slate-700">
               Curso de destino
@@ -376,10 +379,10 @@ export const EnrollmentRequestsPage: React.FC = () => {
 
       {confirmAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-edu-border bg-white p-5 shadow-2xl">
+          <div ref={confirmDialogRef} className="w-full max-w-sm rounded-2xl border border-edu-border bg-white p-5 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="enrollment-confirm-title">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600"><AlertTriangle size={20} /></div>
             <div className="mt-4 space-y-1.5 text-center">
-              <h3 className="text-sm font-bold text-slate-800">{confirmAction.type === 'reject' ? '¿Rechazar solicitud?' : '¿Archivar solicitud?'}</h3>
+              <h3 id="enrollment-confirm-title" className="text-sm font-bold text-slate-800">{confirmAction.type === 'reject' ? '¿Rechazar solicitud?' : '¿Archivar solicitud?'}</h3>
               <p className="text-xs leading-relaxed text-edu-muted">{confirmAction.request.studentFirstName} {confirmAction.request.studentLastName} cambiará a estado {confirmAction.type === 'reject' ? 'rechazada' : 'archivada'}.</p>
             </div>
             <div className="mt-5 flex gap-2">

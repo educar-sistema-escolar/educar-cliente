@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useAccessibleDialog } from '../../shared/hooks/useAccessibleDialog';
 import {
   Activity,
   AlertTriangle,
@@ -42,9 +43,10 @@ function getChildDniFromParent(email: string): string | null {
 
 export const StudentActivitiesPage: React.FC = () => {
   const session = getSession();
-  const [version, setVersion] = useState(0);
+  const [, setVersion] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ type: 'enroll' | 'unenroll'; activityId: string; activityName: string } | null>(null);
+  const confirmDialogRef = useAccessibleDialog<HTMLDivElement>(Boolean(confirm), () => setConfirm(null));
     const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -59,11 +61,8 @@ export const StudentActivitiesPage: React.FC = () => {
     ? (session?.email ? getChildDniFromParent(session.email) : null)
     : (session?.email ? getStudentDni(session.email) : null);
 
-  const allActivities = useMemo(() => listActivities().filter(a => a.isActive), [version]);
-  const myActivities = useMemo(() => {
-    if (!dni) return [];
-    return getStudentActivities(dni);
-  }, [version, dni]);
+  const allActivities = listActivities().filter(a => a.isActive);
+  const myActivities = dni ? getStudentActivities(dni) : [];
 
   const executeEnroll = (activityId: string) => {
     if (!dni) return;
@@ -254,11 +253,11 @@ export const StudentActivitiesPage: React.FC = () => {
 
       {confirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-100 bg-white p-5 shadow-2xl text-center space-y-4">
+          <div ref={confirmDialogRef} className="w-full max-w-sm rounded-2xl border border-slate-100 bg-white p-5 shadow-2xl text-center space-y-4" role="dialog" aria-modal="true" aria-labelledby="activity-confirm-title">
             <div className={`mx-auto flex h-10 w-10 items-center justify-center rounded-xl ${confirm.type === 'enroll' ? 'bg-edu-secondary/10 text-edu-secondary' : 'bg-red-50 text-red-600'}`}>
               {confirm.type === 'enroll' ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
             </div>
-            <h3 className="text-sm font-bold text-slate-800">
+            <h3 id="activity-confirm-title" className="text-sm font-bold text-slate-800">
               {confirm.type === 'enroll' ? 'Confirmar inscripción' : 'Confirmar desinscripción'}
             </h3>
             <p className="text-xs text-slate-500">

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useAccessibleDialog } from '../../shared/hooks/useAccessibleDialog';
 import {
   AlertTriangle,
   CheckCheck,
@@ -66,6 +67,7 @@ export const CommentsModerationPage: React.FC = () => {
     commentId: string;
     commentContent: string;
   } | null>(null);
+  const confirmDialogRef = useAccessibleDialog<HTMLDivElement>(Boolean(confirmAction), () => setConfirmAction(null));
 
   const refreshComments = () => {
     setComments(listAllCommentsForModeration());
@@ -190,11 +192,11 @@ export const CommentsModerationPage: React.FC = () => {
         const btnClass = confirmAction.type === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : confirmAction.type === 'reject' ? 'bg-red-600 hover:bg-red-700' : confirmAction.type === 'pending' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700';
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl text-center space-y-4">
+            <div ref={confirmDialogRef} className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl text-center space-y-4" role="dialog" aria-modal="true" aria-labelledby="comment-confirm-title">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 text-slate-600 shadow-sm">
                 <AlertTriangle className="h-6 w-6" />
               </div>
-              <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+              <h3 id="comment-confirm-title" className="text-sm font-bold text-slate-800">{title}</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
                 {confirmAction.type === 'delete'
                   ? 'Esta acción no se puede deshacer. El comentario se eliminará permanentemente.'

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, MapPin, MessageCircle, Phone, Send } from 'lucide-react';
+import { Mail, MapPin, Phone, Send } from 'lucide-react';
+import { Button } from '../../../shared/components/ui/Button';
 
 const contactData = {
   address: 'Av. Sarmiento 1250',
@@ -41,27 +42,26 @@ export const ContactSection: React.FC = () => {
             </div>
             <span>{contactData.address}</span>
           </div>
-          <div className="flex items-center gap-2.5 text-sm font-medium text-slate-600 transition-colors hover:text-edu-primary">
+          <a href={`tel:${contactData.phone.replace(/[^\d+]/g, '')}`} className="flex items-center gap-2.5 text-sm font-medium text-slate-700 transition-colors hover:text-edu-primary focus-visible:rounded-lg">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm">
               <Phone size={16} />
             </div>
             <span>{contactData.phone}</span>
-          </div>
-          <div className="flex items-center gap-2.5 text-sm font-medium text-slate-600 transition-colors hover:text-edu-primary">
+          </a>
+          <a href={`mailto:${contactData.email}`} className="flex items-center gap-2.5 text-sm font-medium text-slate-700 transition-colors hover:text-edu-primary focus-visible:rounded-lg">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm">
               <Mail size={16} />
             </div>
             <span>{contactData.email}</span>
-          </div>
+          </a>
         </div>
 
         <div className="mx-auto max-w-lg rounded-3xl border border-slate-100 bg-white p-8 text-left shadow-xl shadow-slate-200/40 md:p-10">
           {success ? (
             <div className="space-y-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-5">
-              <p className="text-sm font-bold text-emerald-800">Consulta enviada</p>
-              <p className="text-sm leading-relaxed text-emerald-700">
-                Tu mensaje quedo registrado dentro del MVP. Si prefieres avanzar
-                directo con admisiones, puedes continuar por solicitud de inscripción.
+              <p className="text-sm font-bold text-emerald-800">Consulta preparada en tu correo</p>
+              <p className="text-sm leading-relaxed text-emerald-700" role="status">
+                Intentamos abrir tu aplicación de correo con el mensaje preparado. Si se abrió, revisá los datos y presioná Enviar; esta página no puede confirmar su entrega. Si no se abrió, escribinos a {contactData.email}.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
@@ -70,13 +70,13 @@ export const ContactSection: React.FC = () => {
                 >
                   Ir a inscripción
                 </Link>
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setSuccess(false)}
-                  className="inline-flex h-11 items-center justify-center rounded-xl bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                 >
                   Enviar otra consulta
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -84,15 +84,26 @@ export const ContactSection: React.FC = () => {
               className="space-y-5"
               onSubmit={(event) => {
                 event.preventDefault();
+                const formData = new FormData(event.currentTarget);
+                const subject = `Consulta institucional de ${String(formData.get('name') ?? '').trim()}`;
+                const body = [
+                  `Nombre: ${String(formData.get('name') ?? '').trim()}`,
+                  `Correo: ${String(formData.get('email') ?? '').trim()}`,
+                  '',
+                  String(formData.get('message') ?? '').trim(),
+                ].join('\n');
+                window.location.href = `mailto:${contactData.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                 setSuccess(true);
               }}
             >
               <div className="space-y-1">
-                <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <label htmlFor="contact-name" className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-700">
                   Nombre
                 </label>
                 <input
                   type="text"
+                  id="contact-name"
+                  name="name"
                   placeholder="Ingresa tu nombre"
                   className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 placeholder:text-slate-400 transition-all focus:border-edu-primary focus:bg-white focus:outline-none"
                   required
@@ -100,11 +111,13 @@ export const ContactSection: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <label htmlFor="contact-email" className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-700">
                   Correo
                 </label>
                 <input
                   type="email"
+                  id="contact-email"
+                  name="email"
                   placeholder="ejemplo@correo.com"
                   className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 placeholder:text-slate-400 transition-all focus:border-edu-primary focus:bg-white focus:outline-none"
                   required
@@ -112,10 +125,12 @@ export const ContactSection: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <label htmlFor="contact-message" className="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-700">
                   Mensaje
                 </label>
                 <textarea
+                  id="contact-message"
+                  name="message"
                   placeholder="Escribe tu mensaje..."
                   rows={4}
                   className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 placeholder:text-slate-400 transition-all focus:border-edu-primary focus:bg-white focus:outline-none"
@@ -123,28 +138,18 @@ export const ContactSection: React.FC = () => {
                 />
               </div>
 
-              <button
+              <Button
                 type="submit"
-                className="group mt-2 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-edu-primary text-sm font-bold text-white shadow-md shadow-edu-primary/20 transition-all active:scale-[0.98] hover:bg-edu-secondary"
+                size="lg"
+                className="group mt-2 w-full shadow-md shadow-blue-900/15"
               >
                 <span>Enviar Consulta</span>
                 <Send size={16} className="transition-transform group-hover:translate-x-1" />
-              </button>
+              </Button>
             </form>
           )}
         </div>
 
-        <div className="mt-10 flex justify-center gap-4">
-          <a href="#" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-500 shadow-sm transition-colors hover:text-[#1877F2]">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-          </a>
-          <a href="#" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-500 shadow-sm transition-colors hover:text-[#E1306C]">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
-          </a>
-          <a href="#" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-500 shadow-sm transition-colors hover:text-[#25D366]">
-            <MessageCircle size={16} />
-          </a>
-        </div>
       </div>
     </section>
   );

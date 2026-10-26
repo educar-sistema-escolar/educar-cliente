@@ -6,11 +6,40 @@ import {
   Mail,
   Clock,
   ShieldCheck,
+  GraduationCap,
   KeyRound,
-  LogIn,
+  Users,
 } from 'lucide-react';
-import { localDemoAccounts } from '../../../features/auth/data/localDemoAccounts';
-import type { DemoUserRole } from '../../../features/auth/types';
+import { getConfiguredDemoAccessCards } from '../../utils/demoAccess';
+
+const demoAccessCards = getConfiguredDemoAccessCards();
+
+const demoRoleStyles = {
+  superadmin: {
+    icon: ShieldCheck,
+    badge: 'border-blue-300/30 bg-blue-400/10 text-blue-200',
+    iconWrap: 'bg-blue-400/15 text-blue-200',
+    button: 'bg-blue-600 hover:bg-blue-500 focus-visible:outline-blue-300',
+  },
+  teacher: {
+    icon: GraduationCap,
+    badge: 'border-cyan-300/30 bg-cyan-400/10 text-cyan-200',
+    iconWrap: 'bg-cyan-400/15 text-cyan-200',
+    button: 'bg-cyan-700 hover:bg-cyan-600 focus-visible:outline-cyan-300',
+  },
+  family: {
+    icon: Users,
+    badge: 'border-violet-300/30 bg-violet-400/10 text-violet-200',
+    iconWrap: 'bg-violet-400/15 text-violet-200',
+    button: 'bg-violet-700 hover:bg-violet-600 focus-visible:outline-violet-300',
+  },
+  student: {
+    icon: GraduationCap,
+    badge: 'border-amber-300/30 bg-amber-400/10 text-amber-200',
+    iconWrap: 'bg-amber-400/15 text-amber-200',
+    button: 'bg-amber-700 hover:bg-amber-600 focus-visible:outline-amber-300',
+  },
+} as const;
 
 const navLinks = [
   { label: 'Inicio', path: '/' },
@@ -76,13 +105,6 @@ const socialLinks = [
     icon: <Mail size={14} />,
   },
 ];
-
-const demoRolePresentation: Record<DemoUserRole, { label: string; className: string }> = {
-  superadmin: { label: 'Superadministrador', className: 'text-edu-secondary-light' },
-  teacher: { label: 'Docente', className: 'text-emerald-400' },
-  parent: { label: 'Familia', className: 'text-amber-400' },
-  student: { label: 'Estudiante', className: 'text-sky-400' },
-};
 
 export const Footer: React.FC = () => {
   return (
@@ -178,7 +200,7 @@ export const Footer: React.FC = () => {
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail size={14} className="text-edu-accent shrink-0" />
-                <span>{institutionalData.email}</span>
+                <span className="break-all">{institutionalData.email}</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Clock size={14} className="mt-0.5 text-edu-accent shrink-0" />
@@ -188,50 +210,83 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Demo Credentials Area (Integrated in Footer) */}
-        <div className="mt-10 border-t border-slate-900/60 pt-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 rounded-2xl bg-white/[0.015] border border-white/[0.03] p-4">
-            <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
-                <KeyRound size={15} />
-              </span>
+          <section aria-labelledby="demo-access-title" className="mt-10 border-t border-slate-900/60 pt-6">
+            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-bold text-slate-200">Credenciales de Acceso Demo</p>
-                <p className="text-[10px] text-slate-500">Úsalas en la pantalla de inicio de sesión para probar cada rol.</p>
+                <h3 id="demo-access-title" className="text-sm font-bold text-white">Credenciales de Acceso Demo</h3>
+                <p className="mt-1 text-xs text-slate-400">Cuentas públicas de prueba para la demostración académica.</p>
               </div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Acceso manual · no inicia sesión automáticamente</span>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
-              {localDemoAccounts.map((credential) => (
-                <Link
-                  key={credential.role}
-                  to={`/login?demo=${credential.role}`}
-                  aria-label={`Iniciar sesión como ${demoRolePresentation[credential.role].label}`}
-                  className="group rounded-xl border border-white/[0.02] bg-slate-900/40 p-2.5 text-[11px] transition hover:border-white/10 hover:bg-slate-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-edu-accent"
-                >
-                  <p className={`font-bold text-[9px] uppercase tracking-wider ${demoRolePresentation[credential.role].className}`}>
-                    {demoRolePresentation[credential.role].label}
-                  </p>
-                  <p className="text-slate-300 font-mono mt-0.5 select-all">{credential.email}</p>
-                  <p className="text-slate-500 font-mono text-[9px]">pass: {credential.password}</p>
-                  <span className="mt-2 flex items-center gap-1 text-[9px] font-semibold text-slate-400 transition group-hover:text-white">
-                    <LogIn size={11} />
-                    Usar credenciales
-                  </span>
-                </Link>
-              ))}
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {demoAccessCards.map((account) => {
+                const style = demoRoleStyles[account.id];
+                const Icon = style.icon;
+
+                return (
+                  <article key={account.id} className="flex min-w-0 flex-col rounded-2xl border border-white/10 bg-slate-950/35 p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${style.iconWrap}`}>
+                        <Icon size={17} aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-white">{account.role}</h4>
+                        <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${style.badge}`}>
+                          {account.available ? 'Demo activa' : 'No disponible'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {account.available ? (
+                      <dl className="mt-4 space-y-2 text-xs">
+                        <div>
+                          <dt className="font-semibold text-slate-400">Correo electrónico</dt>
+                          <dd className="mt-0.5 break-all text-slate-100">{account.email}</dd>
+                        </div>
+                        <div>
+                          <dt className="font-semibold text-slate-400">Contraseña demo</dt>
+                          <dd className="mt-0.5 break-all font-mono text-slate-100">{account.password}</dd>
+                        </div>
+                      </dl>
+                    ) : (
+                      <p className="mt-4 min-h-12 text-xs leading-relaxed text-slate-300" role="note">{account.message}</p>
+                    )}
+
+                    {account.available ? (
+                      <Link
+                        to={`/login?demo=${account.id}`}
+                        aria-label={`Usar credenciales de ${account.role}`}
+                        className={`mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${style.button}`}
+                      >
+                        <KeyRound size={14} aria-hidden="true" />
+                        Usar credenciales
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        aria-label={`Usar credenciales de ${account.role}: no disponible`}
+                        className={`mt-4 inline-flex min-h-11 cursor-not-allowed items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold text-white opacity-50 ${style.button}`}
+                      >
+                        <KeyRound size={14} aria-hidden="true" />
+                        Usar credenciales
+                      </button>
+                    )}
+                  </article>
+                );
+              })}
             </div>
-          </div>
-        </div>
+          </section>
 
         {/* Bottom copyright line */}
         <div className="mt-8 border-t border-slate-900/40 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
             <span>© {institutionalData.year} {institutionalData.name}</span>
             <span>•</span>
-            <Link to="#" className="hover:text-slate-300 transition-colors">Política de privacidad</Link>
+            <span>Política de privacidad</span>
             <span>•</span>
-            <Link to="#" className="hover:text-slate-300 transition-colors">Términos y condiciones</Link>
+            <span>Términos y condiciones</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-500/80 font-medium">
             <ShieldCheck size={14} className="text-emerald-500" />

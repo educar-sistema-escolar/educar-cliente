@@ -312,6 +312,7 @@ export const NewsPage: React.FC = () => {
           <div className="w-full max-w-2xl relative mt-4">
             <input
               type="text"
+              aria-label="Buscar noticias"
               placeholder="Buscar artículos, eventos, novedades..."
               value={searchQuery}
               onChange={(e) => {
@@ -320,9 +321,7 @@ export const NewsPage: React.FC = () => {
               }}
               className="w-full bg-white py-4 pl-6 pr-12 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-edu-secondary focus:border-edu-secondary text-sm text-slate-800 shadow-lg transition-all"
             />
-            <button className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-edu-primary transition-colors">
-              <Search size={20} />
-            </button>
+            <Search size={20} aria-hidden="true" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
           </div>
         </div>
       </section>
