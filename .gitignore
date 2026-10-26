@@ -30,3 +30,7 @@ dist-ssr
 tmp/
 .codebase-memory/
 github-recovery-codes.txt
+
+# Browser test artifacts
+test-results/
+playwright-report/
