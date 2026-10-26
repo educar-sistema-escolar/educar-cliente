@@ -1,12 +1,12 @@
 const levelLabels: Record<string, string> = {
   initial: 'Inicial',
   inicial: 'Inicial',
-  primary: 'Primario',
-  primario: 'Primario',
-  primaria: 'Primario',
-  secondary: 'Secundario',
-  secundario: 'Secundario',
-  secundaria: 'Secundario',
+  primary: 'Primaria',
+  primario: 'Primaria',
+  primaria: 'Primaria',
+  secondary: 'Secundaria',
+  secundario: 'Secundaria',
+  secundaria: 'Secundaria',
 };
 
 export function educationalLevelLabel(level: string | null | undefined) {

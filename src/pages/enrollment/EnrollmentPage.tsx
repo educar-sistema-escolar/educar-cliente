@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { createEnrollmentRequest, getStudentAcademicEnrollmentStatus, listAvailableEnrollmentYears } from '../../features/inscripcion/services/enrollmentStore';
 import type { EnrollmentRequest } from '../../features/inscripcion/types';
+import { educationalLevelLabel } from '../../shared/utils/educationalLevelLabel';
 
 type EnrollmentLevel = 'Inicial' | 'Primario' | 'Secundario';
 
@@ -45,21 +46,21 @@ const levelOptions: Array<{
 }> = [
   {
     level: 'Inicial',
-    title: 'Nivel Inicial',
+    title: 'Inicial',
     description: 'Primeros pasos en un entorno cuidado.',
     icon: <span className="text-[3.1rem] leading-none">🧸</span>,
     courses: ['Sala de 3 años', 'Sala de 4 años', 'Sala de 5 años'],
   },
   {
     level: 'Primario',
-    title: 'Nivel Primario',
+    title: 'Primaria',
     description: 'Aprendizaje integral y acompanado.',
     icon: <span className="text-[3.1rem] leading-none">📚</span>,
     courses: ['1° Grado', '2° Grado', '3° Grado', '4° Grado', '5° Grado', '6° Grado', '7° Grado'],
   },
   {
     level: 'Secundario',
-    title: 'Nivel Secundario',
+    title: 'Secundaria',
     description: 'Proyecto de vida y autonomia.',
     icon: <span className="text-[3.1rem] leading-none">🎓</span>,
     courses: ['1° Año', '2° Año', '3° Año', '4° Año', '5° Año'],
@@ -297,7 +298,7 @@ function SelectField({
       >
         {options.map((option) => (
           <option key={option} value={option}>
-            {option}
+            {name === 'educationalLevel' ? educationalLevelLabel(option) : option}
           </option>
         ))}
       </select>
@@ -863,7 +864,7 @@ export const EnrollmentPage: React.FC = () => {
                   </h3>
                   <dl className="space-y-3">
                     <SummaryLine label="Alumno" value={`${formData.studentFirstName} ${formData.studentLastName}`.trim()} />
-                    <SummaryLine label="Nivel educativo" value={formData.educationalLevel} />
+                    <SummaryLine label="Nivel educativo" value={educationalLevelLabel(formData.educationalLevel) ?? formData.educationalLevel} />
                     <SummaryLine label="Sala o curso" value={formData.schoolYear} />
                     <SummaryLine label="Turno" value={formData.turn} />
                     <SummaryLine label="Ciclo lectivo" value={String(formData.academicYear)} />

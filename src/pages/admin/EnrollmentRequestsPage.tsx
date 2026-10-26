@@ -25,6 +25,7 @@ import {
 } from '../../features/inscripcion/services/enrollmentStore';
 import type { EnrollmentRequest, EnrollmentStatus } from '../../features/inscripcion/types';
 import { toUserFacingError } from '../../shared/utils/userFacingError';
+import { educationalLevelLabel } from '../../shared/utils/educationalLevelLabel';
 import { useAccessibleDialog } from '../../shared/hooks/useAccessibleDialog';
 
 const statusLabels: Record<EnrollmentStatus, string> = {
@@ -58,7 +59,7 @@ function formatDate(value: string) {
 }
 
 function courseLabel(course: Course) {
-  return `${course.level?.name ?? 'Nivel'} · ${course.name} · ${course.academic_year}`;
+  return `${educationalLevelLabel(course.level?.name) ?? 'Nivel'} · ${course.name} · ${course.academic_year}`;
 }
 
 export const EnrollmentRequestsPage: React.FC = () => {
@@ -299,7 +300,7 @@ export const EnrollmentRequestsPage: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-1.5 rounded-lg border border-edu-border/60 bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                         <GraduationCap className="h-3.5 w-3.5 text-edu-secondary" />
-                        <span>{request.educationalLevel}</span><span className="text-slate-300">·</span><span>{request.schoolYear}</span>
+                        <span>{educationalLevelLabel(request.educationalLevel)}</span><span className="text-slate-300">·</span><span>{request.schoolYear}</span>
                       </div>
                     </div>
                   </div>

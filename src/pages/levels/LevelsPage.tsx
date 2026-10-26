@@ -9,7 +9,7 @@ export const LevelsPage: React.FC = () => {
   const levels = [
     {
       icon: <Baby size={30} className="text-edu-primary" />,
-      title: 'Nivel Inicial',
+      title: 'Inicial',
       chip: 'Salas 3, 4 y 5 años - Jornada Extendida',
       desc: 'Centrado en el aprendizaje a través del juego, la estimulación integral y la libre exploración en modalidad de jornada extendida. Promovemos los primeros pasos firmes en la socialización y el autoconocimiento con docentes especializadas en primera infancia.',
       bg: 'bg-[#D6EAF8]/60',
@@ -17,7 +17,7 @@ export const LevelsPage: React.FC = () => {
     },
     {
       icon: <BookOpen size={30} className="text-[#166534]" />,
-      title: 'Nivel Primario',
+      title: 'Primaria',
       chip: '1° a 6° grado - Jornada Extendida',
       desc: 'Garantiza el desarrollo consolidado de competencias en lectoescritura, cálculo científico y pensamiento lógico. Incorpora talleres complementarios de informática y robótica educativa, además del inicio formal de la grilla de idiomas plurilingües.',
       bg: 'bg-[#DCFCE7]/60',
@@ -25,7 +25,7 @@ export const LevelsPage: React.FC = () => {
     },
     {
       icon: <GraduationCap size={30} className="text-[#92400E]" />,
-      title: 'Nivel Secundario',
+      title: 'Secundaria',
       chip: '1° a 5° año - Jornada Extendida',
       desc: 'Ofrece orientaciones validadas en Economía e Informática. Cuenta con laboratorios tecnológicos avanzados y talleres de desarrollo de software prácticos, articulando de manera de excelencia el traspaso hacia el ámbito universitario y profesional.',
       bg: 'bg-[#FEF3C7]/60',
