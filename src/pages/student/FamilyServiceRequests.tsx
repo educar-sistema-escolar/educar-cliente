@@ -114,6 +114,7 @@ export function FamilyServiceRequests({ student, academicYear, onRefresh }: { st
           })}
         </select></label>
         {selectedGroup && <div className="mt-3 rounded-lg border border-edu-border bg-white p-3 text-xs leading-5 text-edu-muted">
+          <p className="break-words text-sm font-semibold text-edu-primary">{selectedGroup.sport?.name ?? 'Deporte'} · {selectedGroup.name}</p>
           <p><strong className="text-edu-primary">{educationalLevelLabel(selectedGroup.level?.name) ?? 'Todos los niveles'}</strong> · {availabilityById.get(selectedGroup.id)?.available ?? 0} cupos disponibles</p>
           {selectedGroup.teacher?.person && <p>Profesor: {selectedGroup.teacher.person.first_name} {selectedGroup.teacher.person.last_name}</p>}
           <p>Horario: {selectedGroup.schedules.filter((item) => item.is_active).map((item) => `${days[item.day_of_week]} ${item.starts_at.slice(0, 5)}–${item.ends_at.slice(0, 5)}`).join(' · ') || 'A confirmar'}</p>

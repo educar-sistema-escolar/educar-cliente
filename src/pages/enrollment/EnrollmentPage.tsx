@@ -121,7 +121,7 @@ function formatRequestNumber(request: EnrollmentRequest | null) {
   return `#EPT-${request?.academicYear ?? new Date().getFullYear()}-${source}`;
 }
 
-function StepHero({ activeStep }: { activeStep: number }) {
+function StepHero({ activeStep, academicYear }: { activeStep: number; academicYear: number }) {
   return (
     <section className="relative overflow-hidden rounded-b-[28px] bg-edu-primary px-5 pb-12 pt-6 text-white shadow-[0_18px_40px_rgba(20,82,200,0.22)] md:rounded-[20px] md:px-10 md:pb-14 md:pt-8">
       <SchoolLineArt />
@@ -137,7 +137,7 @@ function StepHero({ activeStep }: { activeStep: number }) {
         </div>
 
         <h1 className="mt-8 text-[2.35rem] font-extrabold leading-none tracking-[-0.01em] md:text-[3.65rem]">
-          Inscripción 2026
+          Inscripción {academicYear}
         </h1>
         <p className="mt-3 text-base font-medium text-white/95 md:text-lg">
           Completá la solicitud de admisión en pocos pasos.
@@ -671,7 +671,7 @@ export const EnrollmentPage: React.FC = () => {
   return (
     <section className="min-h-screen bg-[#F4F0E8] font-sans text-[#18304D]">
       <div className="mx-auto max-w-[1180px] px-3 pb-10 md:px-4 md:pt-4">
-        <StepHero activeStep={step} />
+        <StepHero activeStep={step} academicYear={formData.academicYear} />
 
         <section className="-mt-5 grid gap-4 rounded-t-[24px] bg-white/70 p-3 shadow-[0_-2px_0_rgba(255,255,255,0.75)] md:grid-cols-[1fr_300px] md:gap-4 md:p-5 lg:grid-cols-[1fr_310px]">
           <form
