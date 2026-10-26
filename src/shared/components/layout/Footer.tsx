@@ -255,7 +255,7 @@ export const Footer: React.FC = () => {
 
                     {account.available ? (
                       <Link
-                        to={`/login?demo=${account.id}`}
+                        to={`/login?demo=${account.id}#login-submit`}
                         aria-label={`Usar credenciales de ${account.role}`}
                         className={`mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${style.button}`}
                       >

@@ -15,6 +15,7 @@ import {
   Utensils,
 } from 'lucide-react';
 import { getSupabaseAccountSession } from '../../features/auth/services/supabaseAuth';
+import { listAvailableEnrollmentYears } from '../../features/inscripcion/services/enrollmentStore';
 import {
   loadStudentPortal,
   type PortalService,
@@ -23,6 +24,7 @@ import {
 import { toUserFacingError } from '../../shared/utils/userFacingError';
 import { educationalCourseYear, educationalLevelLabel } from '../../shared/utils/educationalLevelLabel';
 import { Button } from '../../shared/components/ui/Button';
+import { FamilyServiceRequests } from './FamilyServiceRequests';
 import { SportRecommendationAssistant } from './SportRecommendationAssistant';
 
 const weekDays = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -43,6 +45,7 @@ function courseLabel(course: PortalStudent['courses'][number]) {
 
 export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = ({ audience }) => {
   const [students, setStudents] = useState<PortalStudent[]>([]);
+  const [availableAcademicYears, setAvailableAcademicYears] = useState<number[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +61,18 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
         if (!account || (audience === 'student' ? account.role !== 'student' : account.role !== 'parent')) {
           throw new Error('No se pudo validar la cuenta institucional. Iniciá sesión nuevamente.');
         }
-        const result = await loadStudentPortal(account.profileId, audience === 'student' ? 'student' : 'parent');
+        let availableYears: number[] = [];
+        try {
+          availableYears = await listAvailableEnrollmentYears();
+        } catch {
+          // Keep the academic portal readable if enrollment cycles have not been configured yet.
+        }
+        if (mounted) setAvailableAcademicYears(availableYears);
+        const result = await loadStudentPortal(
+          account.profileId,
+          audience === 'student' ? 'student' : 'parent',
+          availableYears[0] ?? new Date().getFullYear(),
+        );
         if (!mounted) return;
         setStudents(result);
         setSelectedStudentId((current) => result.some((student) => student.id === current) ? current : result[0]?.id ?? null);
@@ -75,7 +89,9 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
   const selectedStudent = students.find((student) => student.id === selectedStudentId) ?? null;
   const currentCourse = selectedStudent?.courses[0] ?? null;
   const orderedSchedule = [...(selectedStudent?.schedule ?? [])].sort((left, right) => left.day - right.day || left.startsAt.localeCompare(right.startsAt));
-  const academicYear = currentCourse?.academicYear ?? new Date().getFullYear();
+  const academicYear = currentCourse?.academicYear ?? selectedStudent?.enrollmentRequestAcademicYear ?? new Date().getFullYear();
+  const hasActiveEnrollmentForCycle = selectedStudent?.courses.some((course) => course.academicYear === academicYear) ?? false;
+  const nextAvailableAcademicYear = availableAcademicYears.find((year) => year > academicYear);
   const retry = () => {
     setError(null);
     setIsLoading(true);
@@ -201,9 +217,36 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
               ) : (
                 <p className="mt-3 rounded-xl bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-muted">No hay una cursada activa registrada para este ciclo.</p>
               )}
-              <Link to="/inscripcion" className="mt-5 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-edu-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary">
-                Solicitar una nueva inscripción <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
+              {hasActiveEnrollmentForCycle ? (
+                <p className="mt-5 rounded-xl border border-edu-border bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-primary">
+                  La matrícula del ciclo {academicYear} ya está activa. Los cambios de curso o turno se gestionan con Dirección.
+                </p>
+              ) : selectedStudent.enrollmentRequestStatus === 'pending' ? (
+                <p className="mt-5 rounded-xl border border-edu-border bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-primary">
+                  Ya hay una solicitud de inscripción para el ciclo {academicYear}. Dirección la está revisando.
+                </p>
+              ) : selectedStudent.enrollmentRequestStatus === 'already-requested' ? (
+                <p className="mt-5 rounded-xl border border-edu-border bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-primary">
+                  Ya existe un trámite de inscripción registrado para el ciclo {academicYear}.
+                </p>
+              ) : selectedStudent.enrollmentRequestStatus === 'available' && availableAcademicYears.includes(academicYear) ? (
+                <Link to={`/inscripcion?academicYear=${academicYear}&studentId=${encodeURIComponent(selectedStudent.id)}`} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-edu-primary px-4 text-sm font-semibold text-white transition hover:bg-edu-secondary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary">
+                  Solicitar inscripción para {academicYear} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              ) : selectedStudent.enrollmentRequestStatus === 'available' ? (
+                <p className="mt-5 rounded-xl border border-edu-border bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-primary">
+                  Dirección todavía no habilitó solicitudes para el ciclo {academicYear}.
+                </p>
+              ) : (
+                <p className="mt-5 rounded-xl border border-edu-border bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-primary">
+                  No pudimos verificar si ya hay una solicitud para el ciclo {academicYear}. Actualizá la página o consultá con Dirección antes de iniciar otro trámite.
+                </p>
+              )}
+              {nextAvailableAcademicYear && (
+                <Link to={`/inscripcion?academicYear=${nextAvailableAcademicYear}&studentId=${encodeURIComponent(selectedStudent.id)}`} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-edu-primary bg-white px-4 text-sm font-semibold text-edu-primary transition hover:bg-edu-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary">
+                  Solicitar para el ciclo futuro {nextAvailableAcademicYear} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              )}
             </article>
 
             <article className="rounded-xl border border-edu-border bg-white p-6 sm:p-7">
@@ -289,6 +332,8 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
               )}
             </article>
           </section>
+
+          {audience === 'family' && <FamilyServiceRequests student={selectedStudent} academicYear={academicYear} onRefresh={retry} />}
 
           {audience === 'student' && (
             <section aria-labelledby="sport-assistant-heading" className="rounded-xl border border-blue-100 bg-white p-5 shadow-sm sm:p-6">

@@ -45,6 +45,8 @@ export interface PortalStudent {
   subjects: PortalSubject[];
   schedule: PortalScheduleItem[];
   services: PortalService[];
+  enrollmentRequestAcademicYear: number;
+  enrollmentRequestStatus: 'available' | 'enrolled' | 'pending' | 'already-requested' | 'unavailable';
 }
 
 interface StudentRow {
@@ -136,7 +138,7 @@ async function getStudentIds(profileId: string, role: 'student' | 'parent') {
   return [...relationships].map(([id, relationship]) => ({ id, relationship }));
 }
 
-async function loadStudent(student: StudentRow, relationship: string | null): Promise<PortalStudent> {
+async function loadStudent(student: StudentRow, relationship: string | null, fallbackAcademicYear: number): Promise<PortalStudent> {
   const supabase = requireSupabase();
   const [coursesResult, subjectsResult, sportsResult, transportResult, diningResult] = await Promise.all([
     supabase
@@ -174,6 +176,14 @@ async function loadStudent(student: StudentRow, relationship: string | null): Pr
   fail(diningResult.error);
 
   const courseEnrollments = (coursesResult.data ?? []) as CourseEnrollmentRow[];
+  const enrollmentRequestAcademicYear = courseEnrollments[0]?.academic_year ?? fallbackAcademicYear;
+  const requestStatusResult = await supabase.rpc('get_student_academic_enrollment_status', {
+    p_student_id: student.id,
+    p_academic_year: enrollmentRequestAcademicYear,
+  });
+  const enrollmentRequestStatus = requestStatusResult.error
+    ? 'unavailable'
+    : requestStatusResult.data as PortalStudent['enrollmentRequestStatus'];
   const subjectEnrollments = (subjectsResult.data ?? []) as SubjectEnrollmentRow[];
   const subjectIds = subjectEnrollments.map((item) => item.id);
   const courseIds = [...new Set(courseEnrollments.map((item) => item.course_id))];
@@ -270,10 +280,12 @@ async function loadStudent(student: StudentRow, relationship: string | null): Pr
       };
     }),
     services,
+    enrollmentRequestAcademicYear,
+    enrollmentRequestStatus,
   };
 }
 
-export async function loadStudentPortal(profileId: string, role: 'student' | 'parent') {
+export async function loadStudentPortal(profileId: string, role: 'student' | 'parent', fallbackAcademicYear = new Date().getFullYear()) {
   const supabase = requireSupabase();
   const accessibleStudents = await getStudentIds(profileId, role);
   if (!accessibleStudents.length) return [] as PortalStudent[];
@@ -288,6 +300,6 @@ export async function loadStudentPortal(profileId: string, role: 'student' | 'pa
   const students = (data ?? []) as StudentRow[];
   return Promise.all(students.map((student) => {
     const relationship = accessibleStudents.find((item) => item.id === student.id)?.relationship ?? null;
-    return loadStudent(student, relationship);
+    return loadStudent(student, relationship, fallbackAcademicYear);
   }));
 }

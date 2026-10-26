@@ -51,6 +51,18 @@ const LoginForm: React.FC = () => {
     });
   }, [mode, navigate]);
 
+  useEffect(() => {
+    if (!demoAccount?.available || mode !== 'login' || location.hash !== '#login-submit') return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const submitButton = document.getElementById('login-submit');
+      submitButton?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+      submitButton?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [demoAccount?.available, location.hash, mode]);
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
@@ -318,6 +330,7 @@ const LoginForm: React.FC = () => {
 
                 {/* Submit Button */}
                 <button
+                  id="login-submit"
                   type="submit"
                   disabled={isSubmitting}
                   className="relative flex h-12 w-full items-center justify-center rounded-xl bg-edu-primary text-sm font-semibold text-white shadow-lg shadow-edu-primary/10 hover:bg-edu-secondary-dark hover:shadow-xl transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-75 cursor-pointer"

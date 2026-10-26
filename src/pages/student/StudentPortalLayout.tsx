@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, GraduationCap, MessageSquare, Newspaper } from 'lucide-react';
+import { BookOpen, MessageSquare, Newspaper } from 'lucide-react';
 import { getSupabaseAccountSession, type SupabaseAccountSession, signOutSupabase } from '../../features/auth/services/supabaseAuth';
 
 import { InstitutionalLayout } from '../../shared/components/layout/InstitutionalLayout';
@@ -33,7 +33,6 @@ export const StudentPortalLayout: React.FC<{ audience: 'student' | 'family' }> =
     items={[
       { label: audience === 'student' ? 'Mi recorrido' : 'Alumnos vinculados', path: root, icon: BookOpen, end: true },
       ...(audience === 'student' ? [{ label: 'Foro estudiantil', path: '/alumnos/foro', icon: MessageSquare }] : []),
-      { label: 'Solicitar inscripción', path: '/inscripcion', icon: GraduationCap },
       { label: 'Novedades', path: '/noticias', icon: Newspaper },
     ]} signingOut={isSigningOut} logoutError={logoutError} onLogout={() => void handleSignOut()}><Outlet /></InstitutionalLayout>;
 };
