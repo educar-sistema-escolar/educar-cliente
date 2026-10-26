@@ -6,7 +6,7 @@ Fecha de verificación: 26/10/2026. Sitio probado: https://educar-cliente.vercel
 
 El frontend actualizado está publicado en GitHub `main` y sus cambios ya son visibles en Vercel. Los cuatro roles ingresaron manualmente y accedieron a sus paneles con Supabase. Se corrigió y publicó un 404 al recargar rutas internas.
 
-La entrega tiene dos pendientes concretos: el build remoto carece de las credenciales DEMO y deshabilita sus cuatro botones; GitHub rechaza el push del backend por permisos. No se declara completada la publicación de ambos repositorios ni la precarga pública de credenciales.
+Ambos repositorios están publicados en GitHub main. Queda pendiente la configuración de credenciales DEMO del build remoto de Vercel: en la última prueba pública, sus cuatro botones estaban deshabilitados. No se declara aprobada la precarga pública de credenciales.
 
 ## GitHub y commits
 
@@ -14,13 +14,13 @@ La entrega tiene dos pendientes concretos: el build remoto carece de las credenc
 | --- | --- | --- | --- |
 | educar-cliente | main | `3601be430436041ad1cba1c6117683248ba91501` — Finalizar paneles institucionales y publicar accesos DEMO del frontend | Push confirmado |
 | educar-cliente | main | `31292791594706d7a44f2b2311e34b0be3156473` — Corregir recarga de rutas internas en Vercel | Push confirmado |
-| educar-servidor | main local | `14665a65d25766908d32f024ffd58741ab263784` — Completar migraciones, datos DEMO y validaciones de la presentación | Commit e integración local realizados; push rechazado |
+| educar-servidor | main | `14665a65d25766908d32f024ffd58741ab263784` — Completar migraciones, datos DEMO y validaciones de la presentación | Push confirmado tras habilitar acceso |
 
 Este informe se agrega mediante un commit documental posterior del frontend; su identificador puede consultarse con `git log -1 -- RESUMEN_PUBLICACION_FINAL.md`.
 
 Se revisaron los inventarios acumulados tomando como referencia `REVISION_FINAL_ANTES_DE_PUSH.md`, se preservaron los cambios de etapas anteriores y se hizo fetch antes de integrar. Ambos repositorios partían de 0/0 contra origin/main. La integración desde `codex/final-presentation-qa` fue fast-forward, sin conflictos, sin reset y sin force push.
 
-El push del backend fue rechazado dos veces con: `Permission to educar-sistema-escolar/educar-servidor.git denied to mmoschen` (HTTP 403). El acceso del conector tampoco permitió consultar permisos (`Resource not accessible by integration`). El remoto del backend continúa en `a2a5f424ec0ec5fc4a5bfe092c68bdac010e6c94`, mientras main local conserva el commit pendiente. No se cambiaron remotos ni se enviaron cambios a otro repositorio.
+El push del backend fue inicialmente rechazado con HTTP 403. Después de que el propietario habilitó el acceso, se repitieron fetch, comprobación de ancestros y diff --check: el remoto no tenía trabajo nuevo y era antecesor del commit local. El push normal avanzó main de `a2a5f42` a `14665a6`. `git ls-remote origin refs/heads/main` confirmó el hash completo `14665a65d25766908d32f024ffd58741ab263784`, igual al HEAD local. No se cambiaron remotos ni se utilizó force push. El impedimento de permisos quedó resuelto.
 
 ## Validaciones finales
 
@@ -73,7 +73,8 @@ No se accedió al panel de Vercel, no se modificaron variables remotas ni se eje
 ## Pendientes que requieren intervención externa
 
 1. En el proyecto Vercel existente, cargar para Production los valores DEMO verificados de las ocho variables públicas siguientes y ejecutar un nuevo build: `VITE_DEMO_SUPERADMIN_EMAIL`, `VITE_DEMO_SUPERADMIN_PASSWORD`, `VITE_DEMO_TEACHER_EMAIL`, `VITE_DEMO_TEACHER_PASSWORD`, `VITE_DEMO_FAMILY_EMAIL`, `VITE_DEMO_FAMILY_PASSWORD`, `VITE_DEMO_STUDENT_EMAIL`, `VITE_DEMO_STUDENT_PASSWORD`. Las tarjetas ya son públicas por código, sin flags de acceso ni protección adicional. No poner claves privadas ni credenciales de servidor en variables VITE. Después, repetir botones y precarga en el dominio público.
-2. Resolver el permiso o alcance de la autenticación GitHub de `mmoschen` para escribir en `educar-sistema-escolar/educar-servidor`. Luego ejecutar fetch, confirmar que el remoto es antecesor de main local y hacer `git push origin main` desde backend, sin force. El trabajo está conservado en el commit indicado.
+
+El pendiente anterior de acceso a GitHub del backend está resuelto: su código ya está publicado en main. Este push no ejecutó migraciones ni despliegues de funciones Supabase; las verificaciones previas de ese servicio conservan el alcance indicado en los informes anteriores.
 
 Los informes anteriores se conservan como registro histórico; sus indicaciones de posponer publicación u ocultar DEMO en producción fueron reemplazadas por las instrucciones posteriores del propietario y por los resultados de este informe.
 
