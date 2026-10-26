@@ -11,7 +11,8 @@
     "test:existing": "node --experimental-strip-types --experimental-vm-modules --test tests/teacher-*.test.mjs",
     "test:chatbot:unit": "node --experimental-vm-modules --test tests/chatbot/*.test.mjs",
     "test:chatbot:browser": "playwright test",
-    "test:chatbot:check": "tsc -p tests/chatbot/jsconfig.json && eslint playwright.config.mjs tests/chatbot"
+    "test:chatbot:check": "tsc -p tests/chatbot/jsconfig.json && tsc -p tests/chatbot/component/tsconfig.json && eslint playwright.config.mjs tests/chatbot",
+    "test:chatbot:component": "playwright test --config tests/chatbot/component/playwright.config.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

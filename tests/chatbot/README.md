@@ -1,6 +1,6 @@
 # Student chatbot: RED-first contracts
 
-Step 1 originally added tests only. The later pure-flow module described below implements conversation definitions, but no chatbot UI, service integration, database schema or access policy.
+Step 1 originally added tests only. Later steps add pure conversation definitions and an isolated window; the chatbot is not mounted in the application and has no service integration, database schema or access policy changes.
 
 ## Existing boundaries
 
@@ -133,3 +133,40 @@ Effects **declare** a service lookup, close or allowlisted navigation; they neve
 The 49 focused cases cover all eight definitions, exact buttons/copy, valid edges, home/back/close, lookup/navigation separation, rejected arbitrary navigation, greeting handling, determinism and consumer mutation isolation. Existing unit discovery already includes this file; no package or dependency changes were needed. Browser/backend suites were not rerun because this phase adds no component or service. Their historical RED/setup limitations are not claimed resolved.
 
 Runtime harness: the actual pure module is transpiled and executed in an empty VM context; dependency imports are rejected. Rollback boundary: remove only the pure module, `flow.test.mjs`, and this section. Existing auth/repository/browser contracts remain intact.
+
+## Isolated responsive window (Step 3)
+
+`StudentChatbot.tsx` is a real React component, **not mounted in App or StudentPortalLayout**. It imports only React/ReactDOM, existing Lucide icons and the pure conversation flow. No Supabase, router, authentication, storage or network calls are added.
+
+### Future host integration contract
+
+| Prop | Responsibility |
+|---|---|
+| `studentName` | Display name supplied by the validated host; React renders it as text. |
+| `accountId` | Stable identity for reset/unmount isolation, **not authorization**. Host must validate student-only access. |
+| `onLookup(topic, signal)` | Typed async callback returning `{ topic: 'transport', items: ChatTransportAssignment[] }` or `{ topic: 'sports', items: ChatSportAssignment[] }`. Future adapter performs authorized reads and filters active own assignments. |
+| `onNavigate(target)` | Receives only the pure flow's typed allowlisted destination, after panel close/reset has committed. Future host executes routing and section focus. |
+
+Transport fields are `id`, optional `routeName`, `routeNumber`, `stop`, `academicYear`; sports use `id`, optional `sport`, `group`, `academicYear`. Missing/null/blank display fields show “No informado”. Empty and error states remain distinct. Results contain no arbitrary HTML, catalog/capacity claims or write actions.
+
+The window is a named **nonmodal** dialog: no focus trap, keyboard focus on opening, Escape/focus restoration, live loading status and alert errors. Its navy/cream/teal palette and inherited typography match the student portal. Only the body scrolls; global controls stay visible. Account changes create a fresh keyed instance; home/back/close/navigation/unmount abort and invalidate requests. A synchronous pending ref deduplicates rapid calls, while a request revision also rejects late callbacks that ignore cancellation. `flushSync` is limited to closing before the external navigation callback; it follows the official React event-handler integration contract.
+
+### Verification and TDD evidence
+
+| Command / check | Observed result |
+|---|---|
+| Initial real component smoke with an importable inert launcher | 1 behavioral RED: launcher clicks but no named dialog appears; not a missing-module failure |
+| `npm run test:chatbot:component` | 18 PASS, 0 failures/skips; actual React component in isolated build+preview fixture |
+| `node --experimental-vm-modules --test tests/chatbot/flow.test.mjs` | 49 PASS |
+| `npm run test:chatbot:check` | PASS, including component fixture type checking and scoped test lint |
+| `npm run test:existing` | 4 PASS |
+| `npm run test:chatbot:unit` | 70 PASS / 1 existing route-number RED; no unit expectations weakened |
+| `npm run build` and scoped component/harness ESLint | PASS; existing large-bundle warning |
+| Global `npm run lint` | Existing 4 errors / 4 warnings, no new diagnostics |
+| `git diff 9058c0b..HEAD --check` | PASS after the component commit |
+
+The isolated fixture imports the actual component and injects controllable test-only callbacks. It does not copy/render a fake chatbot and never calls production services. Initial fixture startup had an incorrect nested working directory, corrected before the behavioral RED observation. The first full component pass exposed Escape after a focused menu button disappeared and incorrectly hidden section-services navigation; both were fixed and the final 18 cases pass. Tests cover lifecycle resets, late replies including ignored aborts, dedup/retry, success/empty/missing fields/XSS, navigation ordering, keyboard focus and 390px/desktop layout. They use actual callback resolution and commit synchronization, not sleeps.
+
+Ignored preview PNGs: `test-results/chatbot-desktop.png` and `test-results/chatbot-mobile.png`. The original 92 application-level browser contracts are untouched and remain unmounted/RED; backend/API environment limitations and authorization requirements are unchanged. Neither suite was rerun for this isolated component step.
+
+Rollback boundary: remove `StudentChatbot.tsx`, `tests/chatbot/component`, the component test script/type-check addition, and this section. The pure flow, previous unit/browser contracts and application routing remain unchanged. No new dependency was installed.
