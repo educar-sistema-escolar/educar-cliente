@@ -1,6 +1,6 @@
 # Student chatbot: RED-first contracts
 
-Step 1 adds tests only. No chatbot, production source, database schema, or access policy is implemented here.
+Step 1 originally added tests only. The later pure-flow module described below implements conversation definitions, but no chatbot UI, service integration, database schema or access policy.
 
 ## Existing boundaries
 
@@ -110,3 +110,26 @@ The first correction smoke had 2 PASS, 9 missing-Ayuda RED and 1 fixture block: 
 | `git diff 468bf69..HEAD --check` | PASS after the correction commit |
 
 The grep above uses `|` as regular-expression alternation (backslashes shown in the Markdown table only escape its table separators). The nine later student-flow assertions—including newly added F05/result actions and Q12 stale-response assertions—remain authored but not reached because Ayuda is absent. No corrected full-suite count or chatbot implementation success is claimed. Backend API/pgTAP environment limitations are unchanged by this frontend-only correction.
+
+## Pure conversation definitions
+
+`src/features/chatbot/chatbotFlow.ts` defines exactly eight views, their approved Spanish copy/buttons, and pure transitions. `getChatScreen(view, studentName)` uses the supplied name (trimmed, with “estudiante” fallback); it never looks up an account. `transitionChat(view, action)` accepts only actions offered by the current screen. Unknown actions retain the view with no effect.
+
+Effects **declare** a service lookup, close or allowlisted navigation; they never execute network, router, auth, storage or DOM operations. Navigation resets the view to home and declares that the panel closes. Sections currently have exact headings, not anchor IDs: a future navigation adapter must resolve/focus the declared pathname + semantic section + heading, or later add stable anchors. Service result loading/empty/error presentation remains outside the eight conversation views. The UI renderer must render the supplied greeting as text, not HTML.
+
+### TDD evidence and commands
+
+| Stage / command | Observed result |
+|---|---|
+| Initial importable inert implementation + focused tests | 48 total: 9 PASS / 39 behavioral assertion failures; exit 1, no missing-module failure |
+| `node --experimental-vm-modules --test tests/chatbot/flow.test.mjs` | Final 49 PASS / 0 failures |
+| `npm run test:chatbot:check` | PASS, including new JavaScript test checkJs |
+| `npm run test:existing` | 4 PASS |
+| `npm run test:chatbot:unit` | 71 total: 70 PASS / 1 existing RED (repository drops route number) |
+| `npm run build` | PASS; existing bundle-size warning |
+| `npx eslint src/features/chatbot/chatbotFlow.ts tests/chatbot/flow.test.mjs` | PASS |
+| `git diff 38e6b0c..HEAD --check` | PASS after the pure-flow commit |
+
+The 49 focused cases cover all eight definitions, exact buttons/copy, valid edges, home/back/close, lookup/navigation separation, rejected arbitrary navigation, greeting handling, determinism and consumer mutation isolation. Existing unit discovery already includes this file; no package or dependency changes were needed. Browser/backend suites were not rerun because this phase adds no component or service. Their historical RED/setup limitations are not claimed resolved.
+
+Runtime harness: the actual pure module is transpiled and executed in an empty VM context; dependency imports are rejected. Rollback boundary: remove only the pure module, `flow.test.mjs`, and this section. Existing auth/repository/browser contracts remain intact.
