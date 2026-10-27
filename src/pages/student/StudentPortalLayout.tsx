@@ -2,16 +2,22 @@ import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, GraduationCap, LogOut, MessageSquare, Newspaper } from 'lucide-react';
 import { signOutSupabase } from '../../features/auth/services/supabaseAuth';
+import { usePortalSession } from '../../features/auth/services/portalSessionContext';
+import { StudentChatbot } from '../../features/chatbot/StudentChatbot';
+import { ChatbotRepositoryError, lookupStudentChatbotServices } from '../../features/chatbot/chatbotRepository';
+import { studentPortalDestination } from '../../features/student/services/studentPortalNavigation';
 
 export const StudentPortalLayout: React.FC<{ audience: 'student' | 'family' }> = ({ audience }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const portal = usePortalSession();
   const root = audience === 'student' ? '/alumnos' : '/familias';
   const title = audience === 'student' ? 'Portal del alumno' : 'Portal de familias';
   const isPortalHome = location.pathname === root;
   const isForumPage = audience === 'student' && location.pathname.startsWith('/alumnos/foro');
 
   async function handleSignOut() {
+    portal?.invalidate();
     await signOutSupabase();
     navigate('/login', { replace: true });
   }
@@ -65,9 +71,22 @@ export const StudentPortalLayout: React.FC<{ audience: 'student' | 'family' }> =
         </nav>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
+      <main id="student-portal-content" tabIndex={-1} className="mx-auto max-w-7xl px-4 py-6 outline-none sm:px-6 sm:py-8 lg:py-10">
         <Outlet />
+        <p id="student-navigation-status" role="status" aria-live="polite" className="sr-only" />
       </main>
+      {audience === 'student' && portal?.account.role === 'student' && portal.account.authSource === 'supabase' && <StudentChatbot
+        accountId={portal.account.profileId} studentName={portal.account.name}
+        getErrorMessage={error => error instanceof ChatbotRepositoryError && (error.code === 'LINKAGE_REQUIRED' || error.code === 'LINKAGE_AMBIGUOUS') ? error.message : undefined}
+        onLookup={async (topic, signal) => {
+          try { return await lookupStudentChatbotServices(topic, signal); }
+          catch (error) {
+            if (!signal.aborted && error instanceof ChatbotRepositoryError && ['SESSION_REQUIRED', 'STUDENT_REQUIRED', 'SESSION_CHANGED'].includes(error.code)) portal.revalidate();
+            throw error;
+          }
+        }}
+        onNavigate={target => { const destination = studentPortalDestination(target); if (destination) navigate(destination); }}
+      />}
     </div>
   );
 };

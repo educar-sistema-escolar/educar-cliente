@@ -106,9 +106,12 @@ export async function updateSupabasePassword(password: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-export function subscribeToSupabaseAuth(callback: () => void) {
+export function subscribeToSupabaseAuth(callback: () => void, onInvalidate?: () => void) {
   if (!supabase) return () => undefined;
-  const { data } = supabase.auth.onAuthStateChange(() => {
+  const { data } = supabase.auth.onAuthStateChange(event => {
+    // The portal owns its initial read; invalidation must run before deferred SDK queries.
+    if (onInvalidate && event === 'INITIAL_SESSION') return;
+    onInvalidate?.();
     window.setTimeout(callback, 0);
   });
   return () => data.subscription.unsubscribe();

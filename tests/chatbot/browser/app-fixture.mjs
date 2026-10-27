@@ -13,7 +13,7 @@ async function createApp(page) {
     const state = {
       role: 'student', active: true, status: 'active', authenticated: true, linked: true,
       profileId, name: 'Ana Prueba', rows: serviceRows(), calls: [], writes: [], unexpected: [],
-      mode: 'success', delay: false, pending: [], authDelay: false, authPending: [],
+      mode: 'success', delay: false, pending: [], authDelay: false, authPending: [], profileDelay: false, profilePending: [],
     };
     await page.route('**/*', route => {
       if (new URL(route.request().url()).origin === 'http://127.0.0.1:4178') return route.continue();
@@ -22,14 +22,16 @@ async function createApp(page) {
     });
     await page.route('https://fonts.googleapis.com/**', route => route.fulfill({ contentType: 'text/css', body: '' }));
     await page.route('https://fonts.gstatic.com/**', route => route.abort());
+    await page.route(/^https:\/\/images\.unsplash\.com\/photo-1541339907198-e08756dedf3f\?q=80&w=1200$/, route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"><rect width="1200" height="400" fill="#173b54"/></svg>' }));
     await page.addInitScript(({ key, session }) => localStorage.setItem(key, JSON.stringify(session)), { key: sessionKey, session: authSession() });
     await page.route('https://chatbot-test.supabase.co/**', async route => {
       const request = route.request();
       const url = new URL(request.url());
       const json = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
       if (url.pathname === '/auth/v1/user') {
+        const user = state.authenticated ? authSession(state.profileId).user : null;
         if (state.authDelay) await new Promise(resolve => state.authPending.push(resolve));
-        return state.authenticated ? json(authSession(state.profileId).user) : json({ message: 'Synthetic expired session' }, 401);
+        return user ? json(user) : json({ message: 'Synthetic expired session' }, 401);
       }
       if (url.pathname === '/auth/v1/logout') { state.authenticated = false; return json({}); }
       // The existing administrator landing page uses this SELECT-only RPC during setup.
@@ -41,7 +43,13 @@ async function createApp(page) {
       }
       const table = url.pathname.replace('/rest/v1/', '');
       state.calls.push({ table, query: url.searchParams.toString() });
-      if (table === 'profiles') return json({ id: state.profileId, email: 'student@example.test', full_name: state.name, role: state.role, is_active: state.active, account_status: state.status });
+      if (table === 'profiles') {
+        const id = url.searchParams.get('id')?.replace(/^eq\./, '') ?? state.profileId;
+        if (![profileId, '10000000-0000-4000-8000-000000000002'].includes(id)) return json(null);
+        const profile = { id, email: 'student@example.test', full_name: id === state.profileId ? state.name : 'Bruno Prueba', role: state.role, is_active: state.active, account_status: state.status };
+        if (state.profileDelay) await new Promise(resolve => state.profilePending.push(resolve));
+        return json(profile);
+      }
       if (table === 'people') return json(state.linked ? { id: personId, profile_id: state.profileId, is_active: true } : null);
       const services = ['student_transport_enrollments', 'student_sport_enrollments'];
       if (services.includes(table)) {
@@ -81,16 +89,19 @@ async function createApp(page) {
       release() { state.delay = false; state.pending.splice(0).forEach(resolve => resolve()); },
       async changeAccount(id = null) {
         state.authenticated = id !== null;
-        if (id) { state.profileId = id; state.name = 'Bruno Prueba'; state.rows = { student_transport_enrollments: [], student_sport_enrollments: [] }; }
+        if (id) { state.profileId = id; state.name = id === profileId ? 'Ana Prueba' : 'Bruno Prueba'; state.rows = { student_transport_enrollments: [], student_sport_enrollments: [] }; }
         await page.evaluate(({ key, value }) => {
           const oldValue = localStorage.getItem(key);
           if (value) localStorage.setItem(key, value); else localStorage.removeItem(key);
           window.dispatchEvent(new StorageEvent('storage', { key, oldValue, newValue: value, storageArea: localStorage }));
+          const channel = new BroadcastChannel(key);
+          channel.postMessage({ event: value ? 'SIGNED_IN' : 'SIGNED_OUT', session: value ? JSON.parse(value) : null });
+          channel.close();
         }, { key: sessionKey, value: id ? JSON.stringify(authSession(id)) : null });
       },
     };
     return { app, cleanup() {
-      app.release(); state.authPending.splice(0).forEach(resolve => resolve());
+      app.release(); state.authPending.splice(0).forEach(resolve => resolve()); state.profilePending.splice(0).forEach(resolve => resolve());
       expect(state.writes, 'No service/RPC writes are allowed').toEqual([]);
       expect(state.unexpected, 'Unexpected mock requests require explicit fixture support').toEqual([]);
     } };

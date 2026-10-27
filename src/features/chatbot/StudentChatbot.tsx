@@ -12,11 +12,13 @@ export interface StudentChatbotProps {
   readonly accountId: string;
   readonly onLookup: (topic: ChatLookupTopic, signal: AbortSignal) => Promise<ChatLookupResult>;
   readonly onNavigate: (target: ChatNavigationTarget) => void;
+  readonly getErrorMessage?: (error: unknown) => string | undefined;
 }
 
 type QueryState =
   | { status: 'idle' }
-  | { status: 'loading' | 'empty' | 'error'; topic: ChatLookupTopic }
+  | { status: 'loading' | 'empty'; topic: ChatLookupTopic }
+  | { status: 'error'; topic: ChatLookupTopic; message: string }
   | { status: 'success'; result: ChatLookupResult };
 
 const emptyMessages = {
@@ -31,7 +33,7 @@ export function StudentChatbot(props: StudentChatbotProps) {
   return <ChatWindow key={props.accountId} {...props} />;
 }
 
-function ChatWindow({ studentName, onLookup, onNavigate }: StudentChatbotProps) {
+function ChatWindow({ studentName, onLookup, onNavigate, getErrorMessage }: StudentChatbotProps) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<ChatView>('home');
   const [query, setQuery] = useState<QueryState>({ status: 'idle' });
@@ -82,8 +84,8 @@ function ChatWindow({ studentName, onLookup, onNavigate }: StudentChatbotProps) 
       if (controller.signal.aborted || revision.current !== requestRevision) return;
       if (result.topic !== topic) throw new Error('Unexpected lookup topic');
       setQuery(result.items.length ? { status: 'success', result } : { status: 'empty', topic });
-    } catch {
-      if (!controller.signal.aborted && revision.current === requestRevision) setQuery({ status: 'error', topic });
+    } catch (error) {
+      if (!controller.signal.aborted && revision.current === requestRevision) setQuery({ status: 'error', topic, message: getErrorMessage?.(error) ?? 'No pudimos consultar tu información. Inténtalo nuevamente.' });
     } finally {
       if (revision.current === requestRevision) pending.current = null;
     }
@@ -120,7 +122,7 @@ function ChatWindow({ studentName, onLookup, onNavigate }: StudentChatbotProps) 
       <div className="min-h-0 overflow-y-auto overscroll-contain px-5 py-5">
         {showIntro && <p className="rounded-2xl rounded-tl-sm bg-[#f2f1e9] px-4 py-3 text-sm leading-6">{screen.message}</p>}
         <p role="status" aria-live="polite" className="text-sm leading-6 text-[#5c6c6c]">{query.status === 'loading' ? 'Consultando tu información…' : ''}</p>
-        {query.status === 'error' && <div role="alert" className="rounded-2xl border border-[#ead9c5] bg-[#fbf1e7] p-4 text-sm leading-6"><p>No pudimos consultar tu información. Inténtalo nuevamente.</p><button type="button" onClick={() => void lookup(query.topic)} className={`${buttonClass} mt-3 border border-[#d9ded8] bg-[#fffefa]`}>Reintentar</button></div>}
+        {query.status === 'error' && <div role="alert" className="rounded-2xl border border-[#ead9c5] bg-[#fbf1e7] p-4 text-sm leading-6"><p>{query.message}</p><button type="button" onClick={() => void lookup(query.topic)} className={`${buttonClass} mt-3 border border-[#d9ded8] bg-[#fffefa]`}>Reintentar</button></div>}
         {query.status === 'empty' && <p className="rounded-2xl bg-[#f2f1e9] p-4 text-sm leading-6">{emptyMessages[query.topic]}</p>}
         {query.status === 'success' && <ul className="mt-3 space-y-3">{query.result.topic === 'transport' ? query.result.items.map(item => <li key={item.id} className="rounded-2xl border border-[#e1e2d9] bg-[#f7f6f0] p-4"><dl className="space-y-2 text-sm"><div><dt className="text-xs text-[#556a63]">Recorrido</dt><dd className="break-words font-semibold">{field(item.routeName)} · {field(item.routeNumber)}</dd></div><div><dt className="text-xs text-[#556a63]">Parada</dt><dd className="break-words">{field(item.stop)}</dd></div><div><dt className="text-xs text-[#556a63]">Ciclo lectivo</dt><dd>{field(item.academicYear)}</dd></div></dl></li>) : query.result.items.map(item => <li key={item.id} className="rounded-2xl border border-[#e1e2d9] bg-[#f7f6f0] p-4"><dl className="space-y-2 text-sm"><div><dt className="text-xs text-[#556a63]">Deporte</dt><dd className="break-words font-semibold">{field(item.sport)}</dd></div><div><dt className="text-xs text-[#556a63]">Grupo</dt><dd className="break-words">{field(item.group)}</dd></div><div><dt className="text-xs text-[#556a63]">Ciclo lectivo</dt><dd>{field(item.academicYear)}</dd></div></dl></li>)}</ul>}
         <div className="mt-4 grid gap-2">{actions.map(button => {

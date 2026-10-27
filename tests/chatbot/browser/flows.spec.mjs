@@ -94,27 +94,32 @@ for (const topic of topics) {
   for (const mode of ['error', 'network']) {
     test(`Q05/Q06/Q07/Q08: ${topic.name} ${mode} remains recoverable and never empty`, async ({ app }) => {
       await app.visit(); await app.topic(topic.name); app.state.mode = mode; await app.choose(topic.view);
-      await expect(app.panel()).toContainText(errorText);
+      await expect(app.panel()).toContainText(errorText, { timeout: mode === 'network' ? 10000 : 1200 });
       await expect(app.panel()).not.toContainText(topic.empty);
       await expect(app.panel()).not.toContainText('Synthetic internal error');
       await app.choose('Reintentar');
-      await expect(app.panel()).toContainText(errorText);
+      await expect(app.panel()).toContainText(errorText, { timeout: mode === 'network' ? 10000 : 1200 });
       app.state.mode = 'success'; await app.choose('Reintentar');
       await expect(app.panel()).toContainText(topic.marker);
     });
   }
 
-  test(`Q03/Q04/U03: ${topic.name} loading is announced and duplicate clicks do not duplicate requests`, async ({ app }) => {
+  test(`Q03/Q04/U03: ${topic.name} loading is announced and duplicate clicks do not duplicate requests`, async ({ app, page }) => {
     await app.visit(); await app.topic(topic.name); app.state.delay = true;
+    const started = page.waitForRequest(request => request.url().includes(topic.table));
     await app.panel().getByRole('button', { name: topic.view, exact: true }).dblclick();
     await expect(app.panel().getByRole('status')).toContainText('Consultando tu información…');
+    await started;
+    await expect.poll(() => app.state.calls.filter(call => call.table === topic.table).length).toBe(1);
     expect(app.state.calls.filter(call => call.table === topic.table)).toHaveLength(1);
     app.release(); await expect(app.panel()).toContainText(topic.marker);
   });
 
   for (const action of ['Inicio', 'Volver', 'Cerrar']) {
     test(`Q10/F07/F08/F09: ${topic.name} late response cannot override ${action}`, async ({ app, page }) => {
-      await app.visit(); await app.topic(topic.name); app.state.delay = true; await app.choose(topic.view);
+      await app.visit(); await app.topic(topic.name); app.state.delay = true;
+      const started = page.waitForRequest(request => request.url().includes(topic.table));
+      await app.choose(topic.view); await started;
       await expect(app.panel()).toContainText('Consultando tu información…');
       const completed = serviceCompleted(page, topic.table);
       await app.choose(action); app.release(); await completed;
@@ -185,7 +190,9 @@ test('Q09: failed sports does not block transport', async ({ app }) => {
 });
 
 test('Q11: late transport cannot replace a newer sports result', async ({ app, page }) => {
-  await app.visit(); await app.topic('Transporte'); app.state.delay = true; await app.choose('Ver mi transporte');
+  await app.visit(); await app.topic('Transporte'); app.state.delay = true;
+  const started = page.waitForRequest(request => request.url().includes('student_transport_enrollments'));
+  await app.choose('Ver mi transporte'); await started;
   await expect(app.panel()).toContainText('Consultando tu información…');
   const completed = serviceCompleted(page, 'student_transport_enrollments');
   await app.choose('Inicio'); await app.choose('Deportes');
@@ -223,7 +230,8 @@ for (const event of ['logout', 'expired', 'account-change']) {
   test(`Q12/Q13/U06: ${event} clears previous data and pending results`, async ({ app, page }) => {
     await app.visit(); await app.topic('Transporte');
     app.state.delay = event !== 'expired'; app.state.mode = event === 'expired' ? 'error' : 'success';
-    await app.choose('Ver mi transporte');
+    const started = event === 'expired' ? Promise.resolve() : page.waitForRequest(request => request.url().includes('student_transport_enrollments'));
+    await app.choose('Ver mi transporte'); await started;
     await expect(app.panel()).toContainText(event === 'expired' ? errorText : 'Consultando tu información…');
     const completed = event === 'expired' ? Promise.resolve() : serviceCompleted(page, 'student_transport_enrollments');
     if (event === 'expired') { app.state.authenticated = false; await app.choose('Reintentar'); }
@@ -232,7 +240,8 @@ for (const event of ['logout', 'expired', 'account-change']) {
     app.release(); await completed;
     if (event !== 'account-change') await expect(page).toHaveURL(/\/login/);
     else {
-      if (!(await app.panel().isVisible())) await app.open();
+      await expect(app.panel()).toHaveCount(0);
+      await app.open();
       await expect(app.panel()).toContainText(greeting.replace('Ana Prueba', 'Bruno Prueba'));
       await expect(app.panel()).not.toContainText(/Ana Prueba|Recorrido Norte|Plaza Norte/);
     }

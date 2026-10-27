@@ -1,6 +1,6 @@
 # Student chatbot: RED-first contracts
 
-Step 1 originally added tests only. Later steps add pure conversation definitions, an isolated window and an authenticated read adapter. The chatbot is not mounted in the application; no database schema or access policy changes are included.
+Step 1 originally added tests only. Later steps add pure conversation definitions, a responsive window, authenticated reads and student-only portal integration. No database schema, access policy or dependency changes are included. Historical test snapshots below remain explicitly distinct from the latest candidate.
 
 ## Existing boundaries
 
@@ -216,3 +216,37 @@ The first unrestricted inert-adapter run also had seven cancelled pending-query 
 Tests execute actual auth/repository/adapter modules in a VM with only the Supabase boundary mocked. They cover derived identity, active filters, topic isolation, safe joins, past years, route zero/null, strict-vs-legacy auth behavior, errors vs empty, abort and mid-query account/role/profile/person/student-link changes. The boundary exposes no write/RPC methods. **These tests do not prove database RLS**; no backend/API suite was rerun. The existing application browser suite remains unmounted/integration-RED, not executed here.
 
 Rollback boundary: remove `chatbotRepository.ts`/new lookup tests and this section; restore the previous component DTO declarations, optional auth strict mode and topic-reader additions. Reverting the shared transport mapping would intentionally restore the previous D03 regression. No App/layout mount, navigation adapter, backend/schema/policy or dependency changes were made.
+
+## Student portal integration (Step 5)
+
+`SupabasePortalRoute` shares its validated account through `PortalSessionContext`; the student layout and page reuse it rather than creating another auth store, subscription or initial session lookup. The context is nullable outside its guarded provider. Ayuda mounts only for the student audience with an actual validated Supabase student account, never loading/null/demo/family/teacher/admin accounts. The existing page still loads its authorized portal aggregate; opening chatbot menus adds no service queries.
+
+One route-owned subscription synchronously invalidates/unmounts old personal UI on SDK auth events, then defers SDK reads outside the callback. Refresh generations and mounted guards reject late previous account results. The route already owns the initial validation, so the opt-in synchronous invalidation subscriber ignores the redundant INITIAL_SESSION notification; existing subscribers keep their default behavior. Signout clears the portal before awaiting the network. An aborted old-account lookup cannot force revalidation of a newer account. Typed session/role errors revalidate the guard; linkage errors show only their fixed safe guidance, not “no services”.
+
+The section allowlist maps notes/schedule/services to focusable `student-notes`, `student-schedule`, `student-services` headings. Routing includes the fixed hash; a page-readiness/location-key effect focuses and scrolls after data renders, including from the forum and repeated same-hash navigation. Reduced-motion preference is respected. Missing/unlinked/error targets focus the main region and announce an explanation. There is no arbitrary href, text selector, navigation polling, timer or unbounded observer. Public news exits the guarded portal naturally.
+
+### Verification snapshots
+
+| Command / evidence | Observed result |
+|---|---|
+| Existing pre-integration browser contracts | Previously demonstrated behavioral RED at absent Ayuda; new auth-race contract authored before implementation. Latest pre-implementation smoke was startup BLOCKED at 120 seconds, not claimed RED. |
+| `npm run test:chatbot:unit` | 129 PASS, including six fixed-target navigation checks |
+| `npm run test:chatbot:check` and scoped changed-source/test ESLint | PASS |
+| `npm run test:existing` | 4 PASS |
+| `npm run test:chatbot:component` | 18 PASS |
+| `npm run build` | PASS; existing large-bundle warning |
+| Global `npm run lint` | Unchanged 4 errors / 4 warnings |
+| First full `node node_modules/@playwright/test/cli.js test --workers=1` | 95 total: 84 PASS / 11 failures / 0 skipped, 9.0 minutes |
+| Bounded targeted rerun after proven fixture corrections | 19 PASS / 0 failures / 0 skipped, 2.1 minutes |
+| Preview-only replay against the same compiled candidate (no rebuild/full-suite rerun) | 2 PASS; desktop/mobile screenshots inspected |
+| `git diff ad532c4..HEAD --check` | PASS after the integration commit |
+
+The first full run's 11 failures were retained, not converted into a claim of 95/95 GREEN: two count assertions ran before the topic SELECT started, one abort waiter waited for a SELECT that had never started, six forum cases rejected its existing unmocked Unsplash hero asset, the account-switch test raced the SDK notification/new-window mount, and the new auth-race fixture emitted only a StorageEvent instead of the installed SDK's actual BroadcastChannel notification. Production feature bytes were unchanged after that full run. Only these proven fixture/synchronization issues were corrected: wait for the real SELECT after auth/linkage, preserve exact dedup/count/ownership/late-result assertions, wait for old panel closure before opening B's window, mirror the SDK cross-tab notification, and locally fulfill only the exact existing forum hero URL. Unknown external hosts, service writes and unknown RPCs remain rejected.
+
+The 19-case rerun covered all 11 failures plus related cancellation variants. The full 95-case suite was **not rerun**; therefore the latest delivery remains explicitly partial with respect to a single all-GREEN full-suite snapshot, pending independent audit. The original 92 app contracts were retained and three cases added (auth refresh race and desktop/mobile previews). Network-failure assertions allow up to 10 seconds for the installed SDK's documented automatic retries; expected messages and recovery assertions are unchanged. Startup allowance is 180 seconds after the observed 120-second setup timeout.
+
+Preview screenshots use synthetic fixture accounts on the actual compiled application, not production credentials or an RLS proof. Browser traces, screenshots and CLI output stay ignored; unknown `.playwright-cli` contents are preserved and ignored rather than committed. No backend/live-production account or policy test was performed in this step.
+
+Retained preview files: `tmp/chatbot-portal-step5-desktop.png` and `tmp/chatbot-portal-step5-mobile.png`. Copies live outside the runner output because a subsequent Playwright invocation clears `test-results`; the original full-run screenshots were replaced by the bounded replay, not claimed retained. The ignored temporary preview config reuses the exact compiled candidate without rebuilding or changing app code.
+
+Rollback: revert this integration commit to restore the previous unmounted component/adapter, independent page validation, prior route behavior and section markup. No backend, schema, RLS, dependency or global-store rollback is needed.
