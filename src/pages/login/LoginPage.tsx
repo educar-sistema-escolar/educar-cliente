@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   CheckCircle2,
@@ -16,17 +16,33 @@ import {
 import { getRoleHomePath } from '../../features/auth/services/demoAuth';
 import { getSupabaseAccountSession, loginInstitutionalUser, requestPasswordReset, updateSupabasePassword } from '../../features/auth/services/supabaseAuth';
 import { toUserFacingError } from '../../shared/utils/userFacingError';
+import { getConfiguredDemoAccessCards } from '../../shared/utils/demoAccess';
 
 const LoginForm: React.FC = () => {
+  const location = useLocation();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const demoRoleId = new URLSearchParams(location.search).get('demo');
+  const demoAccount = useMemo(
+    () => demoRoleId ? getConfiguredDemoAccessCards().find((item) => item.id === demoRoleId && item.available) : undefined,
+    [demoRoleId],
+  );
+  const [email, setEmail] = useState(() => demoAccount?.available ? demoAccount.email : '');
+  const [password, setPassword] = useState(() => demoAccount?.available ? demoAccount.password : '');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [mode, setMode] = useState<'login' | 'request' | 'reset'>(() => new URLSearchParams(window.location.search).get('mode') === 'reset' ? 'reset' : 'login');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [previousDemoRoleId, setPreviousDemoRoleId] = useState(demoRoleId);
+
+  if (previousDemoRoleId !== demoRoleId) {
+    setPreviousDemoRoleId(demoRoleId);
+    if (mode === 'login' && demoAccount?.available) {
+      setEmail(demoAccount.email);
+      setPassword(demoAccount.password);
+    }
+  }
 
   useEffect(() => {
     if (mode === 'reset') return;
@@ -34,6 +50,18 @@ const LoginForm: React.FC = () => {
       if (session) navigate(getRoleHomePath(session.role), { replace: true });
     });
   }, [mode, navigate]);
+
+  useEffect(() => {
+    if (!demoAccount?.available || mode !== 'login' || location.hash !== '#login-submit') return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const submitButton = document.getElementById('login-submit');
+      submitButton?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+      submitButton?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [demoAccount?.available, location.hash, mode]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -225,7 +253,16 @@ const LoginForm: React.FC = () => {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              {demoAccount?.available && mode === 'login' && (
+                <div role="status" aria-live="polite" className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                  Credenciales demo de {demoAccount.role} precargadas. No se inició sesión; presioná “Iniciar sesión” para continuar.
+                </div>
+              )}
+
+              <form
+                onSubmit={handleSubmit}
+                className="space-y-5"
+              >
                 {/* Email Input */}
                 <div className="space-y-2">
                   <label htmlFor="login-email" className="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
@@ -293,6 +330,7 @@ const LoginForm: React.FC = () => {
 
                 {/* Submit Button */}
                 <button
+                  id="login-submit"
                   type="submit"
                   disabled={isSubmitting}
                   className="relative flex h-12 w-full items-center justify-center rounded-xl bg-edu-primary text-sm font-semibold text-white shadow-lg shadow-edu-primary/10 hover:bg-edu-secondary-dark hover:shadow-xl transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-75 cursor-pointer"

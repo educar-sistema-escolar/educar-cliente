@@ -11,16 +11,23 @@ import {
   GraduationCap,
   MapPin,
   RefreshCw,
+  Sparkles,
   Utensils,
 } from 'lucide-react';
 import { usePortalSession } from '../../features/auth/services/portalSessionContext';
 import { studentSectionFromHash } from '../../features/student/services/studentPortalNavigation';
+import { listAvailableEnrollmentYears } from '../../features/inscripcion/services/enrollmentStore';
+
 import {
   loadStudentPortal,
   type PortalService,
   type PortalStudent,
 } from '../../features/student/services/studentPortalRepository';
 import { toUserFacingError } from '../../shared/utils/userFacingError';
+import { educationalCourseYear, educationalLevelLabel } from '../../shared/utils/educationalLevelLabel';
+import { Button } from '../../shared/components/ui/Button';
+import { FamilyServiceRequests } from './FamilyServiceRequests';
+import { SportRecommendationAssistant } from './SportRecommendationAssistant';
 
 const weekDays = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
@@ -32,7 +39,7 @@ const serviceIcon = (kind: PortalService['kind']) => {
 
 function courseLabel(course: PortalStudent['courses'][number]) {
   return [
-    course.yearNumber ? `${course.yearNumber}° año` : null,
+    educationalCourseYear(course.level, course.yearNumber),
     course.division ? `división ${course.division}` : null,
     course.shift === 'morning' ? 'turno mañana' : course.shift === 'afternoon' ? 'turno tarde' : course.shift === 'full_day' ? 'jornada completa' : null,
   ].filter(Boolean).join(' · ');
@@ -43,10 +50,12 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
   const account = portal?.account;
   const location = useLocation();
   const [students, setStudents] = useState<PortalStudent[]>([]);
+  const [availableAcademicYears, setAvailableAcademicYears] = useState<number[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
+  const [showSportAssistant, setShowSportAssistant] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -56,7 +65,18 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
         if (!account || (audience === 'student' ? account.role !== 'student' : account.role !== 'parent')) {
           throw new Error('No se pudo validar la cuenta institucional. Iniciá sesión nuevamente.');
         }
-        const result = await loadStudentPortal(account.profileId, audience === 'student' ? 'student' : 'parent');
+        let availableYears: number[] = [];
+        try {
+          availableYears = await listAvailableEnrollmentYears();
+        } catch {
+          // Keep the academic portal readable if enrollment cycles have not been configured yet.
+        }
+        if (mounted) setAvailableAcademicYears(availableYears);
+        const result = await loadStudentPortal(
+          account.profileId,
+          audience === 'student' ? 'student' : 'parent',
+          availableYears[0] ?? new Date().getFullYear(),
+        );
         if (!mounted) return;
         setStudents(result);
         setSelectedStudentId((current) => result.some((student) => student.id === current) ? current : result[0]?.id ?? null);
@@ -75,7 +95,7 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
     const id = studentSectionFromHash(location.hash);
     if (audience !== 'student' || isLoading || !id) return;
     const target = document.getElementById(id);
-    const fallback = document.getElementById('student-portal-content');
+    const fallback = document.getElementById('institutional-content');
     const notice = document.getElementById('student-navigation-status');
     if (notice) notice.textContent = target ? '' : error ? 'No pudimos abrir esta sección. Intenta cargar tu ficha nuevamente.' : 'Esta sección estará disponible cuando tu legajo esté vinculado. Comunícate con administración.';
     const destination = target ?? fallback;
@@ -84,7 +104,9 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
   }, [audience, isLoading, location.hash, location.key, selectedStudent?.id, error]);
   const currentCourse = selectedStudent?.courses[0] ?? null;
   const orderedSchedule = [...(selectedStudent?.schedule ?? [])].sort((left, right) => left.day - right.day || left.startsAt.localeCompare(right.startsAt));
-  const academicYear = currentCourse?.academicYear ?? new Date().getFullYear();
+  const academicYear = currentCourse?.academicYear ?? selectedStudent?.enrollmentRequestAcademicYear ?? new Date().getFullYear();
+  const hasActiveEnrollmentForCycle = selectedStudent?.courses.some((course) => course.academicYear === academicYear) ?? false;
+  const nextAvailableAcademicYear = availableAcademicYears.find((year) => year > academicYear);
   const retry = () => {
     setError(null);
     setIsLoading(true);
@@ -95,10 +117,10 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
     return (
       <div className="space-y-6" aria-busy="true" aria-live="polite">
         <p className="sr-only" role="status">Cargando información académica.</p>
-        <div className="h-52 animate-pulse rounded-[28px] bg-[#dfe5dc]" />
+        <div className="h-52 animate-pulse rounded-xl bg-edu-light" />
         <div className="grid gap-5 lg:grid-cols-2">
-          <div className="h-72 animate-pulse rounded-[28px] bg-white" />
-          <div className="h-72 animate-pulse rounded-[28px] bg-white" />
+          <div className="h-72 animate-pulse rounded-xl bg-white" />
+          <div className="h-72 animate-pulse rounded-xl bg-white" />
         </div>
       </div>
     );
@@ -106,11 +128,11 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
 
   if (error) {
     return (
-      <section className="mx-auto max-w-2xl rounded-[28px] border border-[#ead9c5] bg-[#fffefa] p-6 shadow-sm sm:p-8" role="alert">
-        <AlertCircle className="h-6 w-6 text-[#aa583f]" aria-hidden="true" />
+      <section className="mx-auto max-w-2xl rounded-xl border border-edu-border bg-white p-6 shadow-sm sm:p-8" role="alert">
+        <AlertCircle className="h-6 w-6 text-red-700" aria-hidden="true" />
         <h1 className="mt-4 text-2xl font-bold tracking-tight">No pudimos abrir tu ficha</h1>
-        <p className="mt-2 text-sm leading-6 text-[#5c6c6c]">{error}</p>
-        <button type="button" onClick={retry} className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#173b54] px-4 text-sm font-semibold text-white hover:bg-[#20536a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176e68]">
+        <p className="mt-2 text-sm leading-6 text-edu-muted">{error}</p>
+        <button type="button" onClick={retry} className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-edu-primary px-4 text-sm font-semibold text-white hover:bg-edu-secondary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary">
           <RefreshCw className="h-4 w-4" aria-hidden="true" />
           Intentar de nuevo
         </button>
@@ -120,22 +142,22 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
 
   if (students.length === 0) {
     return (
-      <section className="relative overflow-hidden rounded-[28px] border border-[#e2e2d8] bg-[#fffefa] p-6 shadow-sm sm:p-9">
-        <div className="absolute -right-8 -top-10 h-48 w-48 rounded-full border-[22px] border-[#e6eee8]" aria-hidden="true" />
+      <section className="relative overflow-hidden rounded-xl border border-edu-border bg-white p-6 shadow-sm sm:p-9">
+        <div className="absolute -right-8 -top-10 h-48 w-48 rounded-full border-[22px] border-edu-light" aria-hidden="true" />
         <div className="relative max-w-2xl">
-          <span className="inline-flex items-center gap-2 rounded-full bg-[#e4eee9] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[#145c58]">
+          <span className="inline-flex items-center gap-2 rounded-full bg-edu-light px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-edu-primary">
             <GraduationCap className="h-4 w-4" aria-hidden="true" />
             Espacio institucional
           </span>
-          <h1 className="mt-5 text-3xl font-bold tracking-tight text-[#173b54] sm:text-4xl">
+          <h1 className="mt-5 text-3xl font-bold tracking-tight text-edu-primary sm:text-4xl">
             {audience === 'student' ? 'Tu legajo todavía no está vinculado' : 'Todavía no hay alumnos vinculados'}
           </h1>
-          <p className="mt-4 max-w-xl text-sm leading-6 text-[#5c6c6c]">
+          <p className="mt-4 max-w-xl text-sm leading-6 text-edu-muted">
             {audience === 'student'
               ? 'La cuenta inició sesión de forma segura, pero la institución aún no vinculó un legajo activo. Contactá a administración para revisar el acceso; no hace falta que compartas tu DNI por este portal.'
               : 'Cuando administración vincule un legajo a tu cuenta, vas a poder acompañar su cursada desde acá. Para cuidar la privacidad, esta pantalla no busca personas por DNI ni correo.'}
           </p>
-          <Link to="/inscripcion" className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#173b54] px-4 text-sm font-semibold text-white hover:bg-[#20536a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176e68]">
+          <Link to="/inscripcion" className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-xl bg-edu-primary px-4 text-sm font-semibold text-white hover:bg-edu-secondary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary">
             Consultar ingreso institucional
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
@@ -146,36 +168,36 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <section className="relative overflow-hidden rounded-[28px] bg-[#173b54] px-6 py-7 text-[#fffefa] shadow-[0_16px_38px_rgba(23,59,84,0.12)] sm:px-9 sm:py-9">
+      <section className="relative overflow-hidden rounded-xl bg-edu-primary px-6 py-7 text-white shadow-sm sm:px-9 sm:py-9">
         <div className="absolute -right-16 -top-20 h-72 w-72 rounded-full border-[34px] border-white/[0.06]" aria-hidden="true" />
         <div className="relative grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#bdd0cb]">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-100">
               {audience === 'student' ? 'Mi cuaderno escolar' : 'Acompañamiento familiar'}
-              <span className="mx-2 text-[#f4cd6c]" aria-hidden="true">/</span>
+              <span className="mx-2 text-blue-100" aria-hidden="true">/</span>
               Ciclo {academicYear}
             </p>
             <h1 className="mt-4 max-w-2xl text-3xl font-bold leading-tight tracking-[-0.03em] sm:text-4xl">
               {audience === 'student' ? 'Tu recorrido escolar, en un solo lugar.' : 'La cursada de tu familia, más cerca.'}
             </h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#d5e0dc]">
+            <p className="mt-3 max-w-xl text-sm leading-6 text-blue-100">
               Información académica y servicios vinculados a los registros institucionales.
             </p>
           </div>
           {audience === 'family' && students.length > 1 && (
             <div className="min-w-56">
-              <label htmlFor="portal-student" className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#bdd0cb]">Legajo seleccionado</label>
-              <select id="portal-student" value={selectedStudentId ?? ''} onChange={(event) => setSelectedStudentId(event.target.value)} className="min-h-11 w-full rounded-xl border border-white/20 bg-[#fffefa] px-3 text-sm font-semibold text-[#173b54] outline-none focus-visible:ring-2 focus-visible:ring-[#f4cd6c]">
+              <label htmlFor="portal-student" className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-blue-100">Legajo seleccionado</label>
+              <select id="portal-student" value={selectedStudentId ?? ''} onChange={(event) => setSelectedStudentId(event.target.value)} className="min-h-11 w-full rounded-xl border border-white/20 bg-white px-3 text-sm font-semibold text-edu-primary outline-none focus-visible:ring-2 focus-visible:ring-blue-100">
                 {students.map((student) => <option key={student.id} value={student.id}>{student.name}</option>)}
               </select>
             </div>
           )}
           {selectedStudent && (
-            <div className="md:col-span-2 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/15 pt-4 text-xs text-[#d5e0dc]">
+            <div className="md:col-span-2 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/15 pt-4 text-xs text-blue-100">
               <span className="font-semibold text-white">{selectedStudent.name}</span>
               {selectedStudent.studentNumber && <span>Legajo {selectedStudent.studentNumber}</span>}
               {selectedStudent.relationship && audience === 'family' && <span>Vínculo: {selectedStudent.relationship}</span>}
-              <span className="inline-flex items-center gap-1.5 text-[#f4cd6c]"><CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Datos con acceso autorizado</span>
+              <span className="inline-flex items-center gap-1.5 text-blue-100"><CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Datos con acceso autorizado</span>
             </div>
           )}
         </div>
@@ -184,124 +206,179 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
       {selectedStudent && (
         <>
           <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-            <article className="rounded-[26px] border border-[#e1e2d9] bg-[#fffefa] p-6 sm:p-7">
+            <article className="rounded-xl border border-edu-border bg-white p-6 sm:p-7">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#556a63]">Cursada actual</p>
-                  <h2 className="mt-2 text-xl font-bold tracking-tight text-[#173b54]">{currentCourse?.name ?? 'Sin curso activo'}</h2>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-edu-muted">Cursada actual</p>
+                  <h2 className="mt-2 text-xl font-bold tracking-tight text-edu-primary">{currentCourse?.name ?? 'Sin curso activo'}</h2>
                 </div>
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#f7edcf] text-[#8a6822]">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-edu-light text-edu-primary">
                   <GraduationCap className="h-5 w-5" aria-hidden="true" />
                 </span>
               </div>
               {currentCourse ? (
                 <>
-                  <p className="mt-2 text-sm text-[#5c6c6c]">{[currentCourse.level, courseLabel(currentCourse)].filter(Boolean).join(' · ') || 'Curso asignado'}</p>
-                  <p className="mt-1 text-xs font-medium text-[#556a63]">Ciclo lectivo {currentCourse.academicYear}</p>
+                  <p className="mt-2 text-sm text-edu-muted">{[educationalLevelLabel(currentCourse.level), courseLabel(currentCourse)].filter(Boolean).join(' · ') || 'Curso asignado'}</p>
+                  <p className="mt-1 text-xs font-medium text-edu-muted">Ciclo lectivo {currentCourse.academicYear}</p>
                   {selectedStudent.courses.length > 1 && (
-                    <div className="mt-5 border-t border-[#e9e8df] pt-4">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#556a63]">Otros ciclos registrados</p>
-                      <ul className="mt-2 space-y-2 text-sm text-[#465d64]">
+                    <div className="mt-5 border-t border-edu-border pt-4">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-edu-muted">Otros ciclos registrados</p>
+                      <ul className="mt-2 space-y-2 text-sm text-edu-muted">
                         {selectedStudent.courses.slice(1).map((course) => <li key={course.id} className="flex justify-between gap-3"><span>{course.name}</span><span className="shrink-0 tabular-nums">{course.academicYear}</span></li>)}
                       </ul>
                     </div>
                   )}
                 </>
               ) : (
-                <p className="mt-3 rounded-xl bg-[#f5f3eb] px-4 py-3 text-sm leading-5 text-[#5c6c6c]">No hay una cursada activa registrada para este ciclo.</p>
+                <p className="mt-3 rounded-xl bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-muted">No hay una cursada activa registrada para este ciclo.</p>
               )}
-              <Link to="/inscripcion" className="mt-5 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[#145c58] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176e68]">
-                Solicitar una nueva inscripción <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
+              {hasActiveEnrollmentForCycle ? (
+                <p className="mt-5 rounded-xl border border-edu-border bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-primary">
+                  La matrícula del ciclo {academicYear} ya está activa. Los cambios de curso o turno se gestionan con Dirección.
+                </p>
+              ) : selectedStudent.enrollmentRequestStatus === 'pending' ? (
+                <p className="mt-5 rounded-xl border border-edu-border bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-primary">
+                  Ya hay una solicitud de inscripción para el ciclo {academicYear}. Dirección la está revisando.
+                </p>
+              ) : selectedStudent.enrollmentRequestStatus === 'already-requested' ? (
+                <p className="mt-5 rounded-xl border border-edu-border bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-primary">
+                  Ya existe un trámite de inscripción registrado para el ciclo {academicYear}.
+                </p>
+              ) : selectedStudent.enrollmentRequestStatus === 'available' && availableAcademicYears.includes(academicYear) ? (
+                <Link to={`/inscripcion?academicYear=${academicYear}&studentId=${encodeURIComponent(selectedStudent.id)}`} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-edu-primary px-4 text-sm font-semibold text-white transition hover:bg-edu-secondary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary">
+                  Solicitar inscripción para {academicYear} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              ) : selectedStudent.enrollmentRequestStatus === 'available' ? (
+                <p className="mt-5 rounded-xl border border-edu-border bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-primary">
+                  Dirección todavía no habilitó solicitudes para el ciclo {academicYear}.
+                </p>
+              ) : (
+                <p className="mt-5 rounded-xl border border-edu-border bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-primary">
+                  No pudimos verificar si ya hay una solicitud para el ciclo {academicYear}. Actualizá la página o consultá con Dirección antes de iniciar otro trámite.
+                </p>
+              )}
+              {nextAvailableAcademicYear && (
+                <Link to={`/inscripcion?academicYear=${nextAvailableAcademicYear}&studentId=${encodeURIComponent(selectedStudent.id)}`} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-edu-primary bg-white px-4 text-sm font-semibold text-edu-primary transition hover:bg-edu-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary">
+                  Solicitar para el ciclo futuro {nextAvailableAcademicYear} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              )}
             </article>
 
-            <article className="rounded-[26px] border border-[#e1e2d9] bg-[#fffefa] p-6 sm:p-7">
+            <article className="rounded-xl border border-edu-border bg-white p-6 sm:p-7">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4eee9] text-[#145c58]"><BookOpen className="h-5 w-5" aria-hidden="true" /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-edu-light text-edu-primary"><BookOpen className="h-5 w-5" aria-hidden="true" /></span>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#556a63]">Aprendizajes</p>
-                  <h2 id="student-notes" tabIndex={-1} className="mt-1 scroll-mt-6 text-xl font-bold tracking-tight text-[#173b54] outline-none">Materias y calificaciones</h2>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-edu-muted">Aprendizajes</p>
+                  <h2 id="student-notes" tabIndex={-1} className="mt-1 scroll-mt-6 text-xl font-bold tracking-tight text-edu-primary outline-none">Materias y calificaciones</h2>
+
                 </div>
               </div>
               {selectedStudent.subjects.length ? (
-                <div className="mt-5 divide-y divide-[#e9e8df]">
+                <div className="mt-5 divide-y divide-edu-border">
                   {selectedStudent.subjects.map((subject) => (
                     <div key={subject.id} className="py-3 first:pt-0 last:pb-0">
                       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                        <h3 className="text-sm font-semibold text-[#243f50]">{subject.name}</h3>
-                        {subject.teacher && <span className="text-xs text-[#556a63]">{subject.teacher}</span>}
+                        <h3 className="text-sm font-semibold text-edu-primary">{subject.name}</h3>
+                        {subject.teacher && <span className="text-xs text-edu-muted">{subject.teacher}</span>}
                       </div>
                       {subject.grades.length ? (
                         <ul className="mt-2 flex flex-wrap gap-2" aria-label={`Calificaciones de ${subject.name}`}>
-                          {subject.grades.map((grade) => <li key={grade.term} className="rounded-xl bg-[#f5f3eb] px-3 py-2 text-xs text-[#526870]">Período {grade.term}: <strong className="tabular-nums text-[#173b54]">{grade.grade.toLocaleString('es-AR')}</strong>{grade.notes && <p className="mt-1 max-w-sm leading-5 text-[#5c6c6c]">{grade.notes}</p>}</li>)}
+                          {subject.grades.map((grade) => <li key={grade.term} className="rounded-xl bg-edu-bg px-3 py-2 text-xs text-edu-muted">Período {grade.term}: <strong className="tabular-nums text-edu-primary">{grade.grade.toLocaleString('es-AR')}</strong>{grade.notes && <p className="mt-1 max-w-sm leading-5 text-edu-muted">{grade.notes}</p>}</li>)}
                         </ul>
-                      ) : <p className="mt-1 text-xs text-[#556a63]">Todavía no hay calificaciones cargadas.</p>}
+                      ) : <p className="mt-1 text-xs text-edu-muted">Todavía no hay calificaciones cargadas.</p>}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="mt-5 rounded-xl bg-[#f5f3eb] px-4 py-3 text-sm leading-5 text-[#5c6c6c]">Las materias aparecerán cuando el equipo institucional complete la asignación del ciclo.</p>
+                <p className="mt-5 rounded-xl bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-muted">Las materias aparecerán cuando el equipo institucional complete la asignación del ciclo.</p>
               )}
             </article>
           </section>
 
           <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-            <article className="rounded-[26px] border border-[#e1e2d9] bg-[#fffefa] p-6 sm:p-7">
+            <article className="rounded-xl border border-edu-border bg-white p-6 sm:p-7">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f7edcf] text-[#8a6822]"><CalendarDays className="h-5 w-5" aria-hidden="true" /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-edu-light text-edu-primary"><CalendarDays className="h-5 w-5" aria-hidden="true" /></span>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#556a63]">Organización semanal</p>
-                  <h2 id="student-schedule" tabIndex={-1} className="mt-1 scroll-mt-6 text-xl font-bold tracking-tight text-[#173b54] outline-none">Horario de clases</h2>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-edu-muted">Organización semanal</p>
+                  <h2 id="student-schedule" tabIndex={-1} className="mt-1 scroll-mt-6 text-xl font-bold tracking-tight text-edu-primary outline-none">Horario de clases</h2>
+
                 </div>
               </div>
               {orderedSchedule.length ? (
                 <ol className="mt-5 space-y-2">
                   {orderedSchedule.map((item) => (
-                    <li key={item.id} className="grid grid-cols-[92px_1fr] items-center gap-3 rounded-xl bg-[#f7f6f0] px-4 py-3 sm:grid-cols-[116px_1fr]">
-                      <span className="text-xs font-semibold capitalize text-[#145c58]">{weekDays[item.day]}</span>
+                    <li key={item.id} className="grid grid-cols-[92px_1fr] items-center gap-3 rounded-xl bg-edu-bg px-4 py-3 sm:grid-cols-[116px_1fr]">
+                      <span className="text-xs font-semibold capitalize text-edu-primary">{weekDays[item.day]}</span>
                       <span className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                        <span className="text-sm font-medium text-[#243f50]">{item.subject}</span>
-                        <span className="inline-flex items-center gap-1 text-xs tabular-nums text-[#556a63]"><Clock3 className="h-3.5 w-3.5" aria-hidden="true" /><time>{item.startsAt}</time>–<time>{item.endsAt}</time></span>
+                        <span className="text-sm font-medium text-edu-primary">{item.subject}</span>
+                        <span className="inline-flex items-center gap-1 text-xs tabular-nums text-edu-muted"><Clock3 className="h-3.5 w-3.5" aria-hidden="true" /><time>{item.startsAt}</time>–<time>{item.endsAt}</time></span>
                       </span>
                     </li>
                   ))}
                 </ol>
               ) : (
-                <p className="mt-5 rounded-xl bg-[#f5f3eb] px-4 py-3 text-sm leading-5 text-[#5c6c6c]">No hay horarios publicados para los cursos activos.</p>
+                <p className="mt-5 rounded-xl bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-muted">No hay horarios publicados para los cursos activos.</p>
               )}
             </article>
 
-            <article className="rounded-[26px] border border-[#e1e2d9] bg-[#fffefa] p-6 sm:p-7">
+            <article className="rounded-xl border border-edu-border bg-white p-6 sm:p-7">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e4eee9] text-[#145c58]"><MapPin className="h-5 w-5" aria-hidden="true" /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-edu-light text-edu-primary"><MapPin className="h-5 w-5" aria-hidden="true" /></span>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#556a63]">Acompañamiento</p>
-                  <h2 id="student-services" tabIndex={-1} className="mt-1 scroll-mt-6 text-xl font-bold tracking-tight text-[#173b54] outline-none">Servicios activos</h2>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-edu-muted">Acompañamiento</p>
+                  <h2 id="student-services" tabIndex={-1} className="mt-1 scroll-mt-6 text-xl font-bold tracking-tight text-edu-primary outline-none">Servicios activos</h2>
+
                 </div>
               </div>
               {selectedStudent.services.length ? (
                 <ul className="mt-5 space-y-3">
                   {selectedStudent.services.map((service) => {
                     const Icon = serviceIcon(service.kind);
-                    return <li key={`${service.kind}-${service.id}`} className="flex items-start gap-3 rounded-xl bg-[#f7f6f0] p-4">
-                      <span className="mt-0.5 text-[#145c58]"><Icon className="h-4 w-4" aria-hidden="true" /></span>
+                    return <li key={`${service.kind}-${service.id}`} className="flex items-start gap-3 rounded-xl bg-edu-bg p-4">
+                      <span className="mt-0.5 text-edu-primary"><Icon className="h-4 w-4" aria-hidden="true" /></span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-xs font-bold uppercase tracking-[0.1em] text-[#556a63]">{service.kind} · {service.academicYear}</span>
-                        <span className="mt-1 block text-sm font-semibold text-[#243f50]">{service.name}</span>
-                        {service.detail && <span className="mt-0.5 block text-xs text-[#556a63]">{service.detail}</span>}
+                        <span className="block text-xs font-bold uppercase tracking-[0.1em] text-edu-muted">{service.kind} · {service.academicYear}</span>
+                        <span className="mt-1 block text-sm font-semibold text-edu-primary">{service.name}</span>
+                        {service.detail && <span className="mt-0.5 block text-xs text-edu-muted">{service.detail}</span>}
                       </span>
                     </li>;
                   })}
                 </ul>
               ) : (
-                <p className="mt-5 rounded-xl bg-[#f5f3eb] px-4 py-3 text-sm leading-5 text-[#5c6c6c]">No hay inscripciones activas a deporte, transporte o comedor.</p>
+                <p className="mt-5 rounded-xl bg-edu-bg px-4 py-3 text-sm leading-5 text-edu-muted">No hay inscripciones activas a deporte, transporte o comedor.</p>
               )}
             </article>
           </section>
 
-          <section className="flex flex-col gap-3 rounded-2xl border border-[#e2e2d8] bg-[#f0eee5] px-5 py-4 text-sm text-[#53686a] sm:flex-row sm:items-start">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#8a6822]" aria-hidden="true" />
-            <p><strong className="text-[#243f50]">En construcción responsable:</strong> asistencia y comunicaciones todavía no están disponibles en esta ficha. Los datos académicos que ves corresponden a registros institucionales autorizados.</p>
+          {audience === 'family' && <FamilyServiceRequests student={selectedStudent} academicYear={academicYear} onRefresh={retry} />}
+
+          {audience === 'student' && (
+            <section aria-labelledby="sport-assistant-heading" className="rounded-xl border border-blue-100 bg-white p-5 shadow-sm sm:p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-800">Recomendación personalizada</p>
+                  <h2 id="sport-assistant-heading" className="mt-1 text-lg font-bold text-edu-primary">Asistente deportivo</h2>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowSportAssistant((open) => !open)}
+                  aria-expanded={showSportAssistant}
+                  className="self-start sm:self-auto"
+                >
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                  {showSportAssistant ? 'Ocultar sugerencias' : 'Consultar deportes compatibles'}
+                </Button>
+              </div>
+              {showSportAssistant && selectedStudent && (
+                <SportRecommendationAssistant student={selectedStudent} academicYear={academicYear} />
+              )}
+            </section>
+          )}
+
+          <section className="flex flex-col gap-3 rounded-2xl border border-edu-border bg-edu-bg px-5 py-4 text-sm text-edu-muted sm:flex-row sm:items-start">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-edu-primary-light" aria-hidden="true" />
+            <p><strong className="text-edu-primary">En construcción responsable:</strong> asistencia y comunicaciones todavía no están disponibles en esta ficha. Los datos académicos que ves corresponden a registros institucionales autorizados.</p>
           </section>
         </>
       )}

@@ -1,81 +1,46 @@
-import React from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, GraduationCap, LogOut, MessageSquare, Newspaper } from 'lucide-react';
+import React, { useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { BookOpen, MessageSquare, Newspaper } from 'lucide-react';
 import { signOutSupabase } from '../../features/auth/services/supabaseAuth';
+
 import { usePortalSession } from '../../features/auth/services/portalSessionContext';
 import { StudentChatbot } from '../../features/chatbot/StudentChatbot';
 import { ChatbotRepositoryError, lookupStudentChatbotServices } from '../../features/chatbot/chatbotRepository';
 import { studentPortalDestination } from '../../features/student/services/studentPortalNavigation';
+import { InstitutionalLayout } from '../../shared/components/layout/InstitutionalLayout';
 
 export const StudentPortalLayout: React.FC<{ audience: 'student' | 'family' }> = ({ audience }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const portal = usePortalSession();
   const root = audience === 'student' ? '/alumnos' : '/familias';
   const title = audience === 'student' ? 'Portal del alumno' : 'Portal de familias';
-  const isPortalHome = location.pathname === root;
+  const portal = usePortalSession();
+  const session = portal?.account ?? null;
   const isForumPage = audience === 'student' && location.pathname.startsWith('/alumnos/foro');
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   async function handleSignOut() {
-    portal?.invalidate();
-    await signOutSupabase();
-    navigate('/login', { replace: true });
+    setIsSigningOut(true);
+    setLogoutError(null);
+    try {
+      await signOutSupabase();
+      portal?.invalidate();
+      navigate('/login', { replace: true });
+    } catch {
+      setLogoutError('No se pudo cerrar la sesión. Verificá tu conexión e intentá nuevamente.');
+    } finally {
+      setIsSigningOut(false);
+    }
   }
 
-  return (
-    <div className="min-h-screen bg-[#f6f4ec] text-[#172f46]">
-      <header className="border-b border-[#d9ded8] bg-[#fffefa]">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Link to={root} className="flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#176e68]">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#173b54] text-[#f4cd6c]">
-              <GraduationCap className="h-6 w-6" aria-hidden="true" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-[#607678]">Educar · Comunidad</span>
-              <span className="block truncate text-base font-bold sm:text-lg">{title}</span>
-            </span>
-          </Link>
-
-          <div className="flex items-center gap-2">
-          <Link to="/" className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#47616c] hover:bg-[#f2f1e9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176e68]">
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Sitio institucional</span>
-              <span className="sm:hidden">Web</span>
-            </Link>
-            <button type="button" aria-label="Cerrar sesión" onClick={() => void handleSignOut()} className="inline-flex min-h-11 min-w-11 items-center gap-2 rounded-xl border border-[#d8dfd8] px-3 text-sm font-semibold text-[#173b54] hover:bg-[#f2f1e9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176e68]">
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Cerrar sesión</span>
-            </button>
-          </div>
-        </div>
-
-        <nav aria-label="Navegación del portal" className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-3 sm:px-6">
-          <Link to={root} aria-current={isPortalHome ? 'page' : undefined} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176e68] ${isPortalHome ? 'bg-[#e4eee9] font-bold text-[#145c58]' : 'font-semibold text-[#47616c] hover:bg-[#f2f1e9]'}`}>
-            <BookOpen className="h-4 w-4" aria-hidden="true" />
-            <span>{audience === 'student' ? 'Mi recorrido' : 'Alumnos vinculados'}</span>
-          </Link>
-          {audience === 'student' && (
-            <Link to="/alumnos/foro" aria-current={isForumPage ? 'page' : undefined} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176e68] ${isForumPage ? 'bg-[#e4eee9] font-bold text-[#145c58]' : 'font-semibold text-[#47616c] hover:bg-[#f2f1e9]'}`}>
-              <MessageSquare className="h-4 w-4" aria-hidden="true" />
-              <span>Foro estudiantil</span>
-            </Link>
-          )}
-          <Link to="/inscripcion" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#47616c] hover:bg-[#f2f1e9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176e68]">
-            <GraduationCap className="h-4 w-4" aria-hidden="true" />
-            <span>Solicitar inscripción</span>
-          </Link>
-          <Link to="/noticias" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-[#47616c] hover:bg-[#f2f1e9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176e68]">
-            <Newspaper className="h-4 w-4" aria-hidden="true" />
-            <span>Novedades</span>
-          </Link>
-        </nav>
-      </header>
-
-      <main id="student-portal-content" tabIndex={-1} className="mx-auto max-w-7xl px-4 py-6 outline-none sm:px-6 sm:py-8 lg:py-10">
-        <Outlet />
-        <p id="student-navigation-status" role="status" aria-live="polite" className="sr-only" />
-      </main>
-      {audience === 'student' && portal?.account.role === 'student' && portal.account.authSource === 'supabase' && <StudentChatbot
+  return <InstitutionalLayout role={audience === 'student' ? 'Alumno' : 'Familia'} title={isForumPage ? 'Foro estudiantil' : title} user={session}
+    items={[
+      { label: audience === 'student' ? 'Mi recorrido' : 'Alumnos vinculados', path: root, icon: BookOpen, end: true },
+      ...(audience === 'student' ? [{ label: 'Foro estudiantil', path: '/alumnos/foro', icon: MessageSquare }] : []),
+      { label: 'Novedades', path: '/noticias', icon: Newspaper },
+    ]} signingOut={isSigningOut} logoutError={logoutError} onLogout={() => void handleSignOut()}><Outlet /><p id="student-navigation-status" role="status" aria-live="polite" className="sr-only" />
+      {audience === 'student' && !isSigningOut && portal?.account.role === 'student' && portal.account.authSource === 'supabase' && <StudentChatbot
         accountId={portal.account.profileId} studentName={portal.account.name}
         getErrorMessage={error => error instanceof ChatbotRepositoryError && (error.code === 'LINKAGE_REQUIRED' || error.code === 'LINKAGE_AMBIGUOUS') ? error.message : undefined}
         onLookup={async (topic, signal) => {
@@ -87,6 +52,5 @@ export const StudentPortalLayout: React.FC<{ audience: 'student' | 'family' }> =
         }}
         onNavigate={target => { const destination = studentPortalDestination(target); if (destination) navigate(destination); }}
       />}
-    </div>
-  );
+    </InstitutionalLayout>;
 };

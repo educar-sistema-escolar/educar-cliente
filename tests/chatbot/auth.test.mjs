@@ -14,7 +14,7 @@ async function sessionFor({ role = 'student', active = true, status = 'active', 
     },
     from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: profile, error: null }) }) }) }),
   };
-  const context = vm.createContext({ client });
+  const context = vm.createContext({ client, setTimeout, clearTimeout });
   const boundary = new vm.SourceTextModule('export const supabase = client; export function requireSupabase() { return client; }', { context });
   function source(path) {
     return new vm.SourceTextModule(ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), {
@@ -22,8 +22,9 @@ async function sessionFor({ role = 'student', active = true, status = 'active', 
     }).outputText, { context });
   }
   const roleModule = source('../../src/features/auth/services/institutionalRole.ts');
+  const timeout = source('../../src/features/auth/services/authTimeout.ts');
   const auth = source('../../src/features/auth/services/supabaseAuth.ts');
-  await auth.link(specifier => specifier === './supabaseClient' ? boundary : roleModule);
+  await auth.link(specifier => specifier === './supabaseClient' ? boundary : specifier === './authTimeout' ? timeout : roleModule);
   await auth.evaluate();
   return Reflect.get(auth.namespace, 'getSupabaseAccountSession')();
 }

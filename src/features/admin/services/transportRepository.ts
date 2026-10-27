@@ -23,8 +23,8 @@ export async function listTransportEnrollments(): Promise<StudentTransportEnroll
   });
 }
 
-export async function enrollStudentInTransport(studentId: string, routeId: string, stopId: string | null): Promise<void> {
-  const { error } = await requireSupabase().rpc('enroll_student_in_transport', { p_student_id: studentId, p_route_id: routeId, p_stop_id: stopId });
+export async function enrollStudentInTransport(studentId: string, routeId: string, stopId: string | null, academicYear: number): Promise<void> {
+  const { error } = await requireSupabase().rpc('enroll_student_in_transport', { p_student_id: studentId, p_route_id: routeId, p_stop_id: stopId, p_academic_year: academicYear });
   if (error) throw repositoryError(error.message);
 }
 

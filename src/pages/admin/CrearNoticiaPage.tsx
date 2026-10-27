@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,6 +15,7 @@ import {
   User,
 } from 'lucide-react';
 import { newsStore } from '../../features/noticias/services/newsStore';
+import { useAccessibleDialog } from '../../shared/hooks/useAccessibleDialog';
 import type { Article } from '../../features/noticias/services/newsStore';
 
 type ArticleCategory = Article['category'];
@@ -29,47 +30,39 @@ function readFileAsDataUrl(file: File) {
 }
 
 export const CrearNoticiaPage: React.FC = () => {
-  const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
+
+  return <ArticleEditor key={id ?? 'new'} id={id} />;
+};
+
+const ArticleEditor: React.FC<{ id?: string }> = ({ id }) => {
+  const navigate = useNavigate();
   const isEditMode = Boolean(id);
-  const [title, setTitle] = useState('');
-  const [lead, setLead] = useState('');
-  const [contentBody, setContentBody] = useState('');
-  const [blockquote, setBlockquote] = useState('');
-  const [category, setCategory] = useState<ArticleCategory>('Institucional');
-  const [image, setImage] = useState('');
-  const [inlineImages, setInlineImages] = useState<string[]>([]);
-  const [author, setAuthor] = useState('Redacción Central');
+  const article = useMemo(() => (id ? newsStore.getArticleById(Number(id)) : null), [id]);
+  const [title, setTitle] = useState(() => article?.title ?? '');
+  const [lead, setLead] = useState(() => article?.lead ?? '');
+  const [contentBody, setContentBody] = useState(() => article?.content.join('\n\n') ?? '');
+  const [blockquote, setBlockquote] = useState(() => article?.blockquote ?? '');
+  const [category, setCategory] = useState<ArticleCategory>(() => (article?.category as ArticleCategory | undefined) ?? 'Institucional');
+  const [image, setImage] = useState(() => article?.image ?? '');
+  const [inlineImages, setInlineImages] = useState<string[]>(() => article?.inlineImages ?? []);
+  const [author, setAuthor] = useState(() => article?.author ?? 'Redacción Central');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [readTime, setReadTime] = useState('3 min');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const successDialogRef = useAccessibleDialog<HTMLDivElement>(showSuccessModal, () => setShowSuccessModal(false));
 
   useEffect(() => {
-    if (!isEditMode) return;
-
-    const article = newsStore.getArticleById(Number(id));
-    if (!article) {
+    if (isEditMode && !article) {
       navigate('/privado/noticias');
-      return;
     }
+  }, [article, isEditMode, navigate]);
 
-    setTitle(article.title);
-    setLead(article.lead);
-    setContentBody(article.content.join('\n\n'));
-    setBlockquote(article.blockquote || '');
-    setCategory(article.category as ArticleCategory);
-    setImage(article.image);
-    setInlineImages(article.inlineImages ?? []);
-    setAuthor(article.author);
-    setReadTime(article.readTime);
-  }, [id, isEditMode, navigate]);
-
-  useEffect(() => {
+  const readTime = useMemo(() => {
     const text = `${title} ${lead} ${contentBody} ${blockquote}`;
     const words = text.trim().split(/\s+/).filter(Boolean).length;
     const minutes = Math.max(1, Math.ceil(words / 220));
-    setReadTime(`${minutes} min`);
+    return `${minutes} min`;
   }, [blockquote, contentBody, lead, title]);
 
   const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -364,11 +357,11 @@ export const CrearNoticiaPage: React.FC = () => {
 
       {showSuccessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-edu-border bg-white p-5 text-center shadow-2xl">
+          <div ref={successDialogRef} className="w-full max-w-sm space-y-4 rounded-2xl border border-edu-border bg-white p-5 text-center shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="news-save-title">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-green-100 to-green-50 text-green-600 shadow-sm">
               <CheckCircle size={24} />
             </div>
-            <p className="text-base font-bold text-slate-800">
+            <p id="news-save-title" className="text-base font-bold text-slate-800">
               {isEditMode ? 'Noticia actualizada' : 'Noticia publicada'}
             </p>
             <p className="text-xs leading-relaxed text-edu-muted">

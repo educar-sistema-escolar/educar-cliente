@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAccessibleDialog } from '../../shared/hooks/useAccessibleDialog';
 import type { PublicOpinion } from '../../features/opiniones/types';
 import {
   AlertTriangle,
@@ -53,6 +54,7 @@ export const OpinionModerationPage: React.FC = () => {
     opinionId: string;
     opinionName: string;
   } | null>(null);
+  const confirmDialogRef = useAccessibleDialog<HTMLDivElement>(Boolean(confirmAction), () => setConfirmAction(null));
 
   const visibleOpinions =
     activeFilter === 'all'
@@ -188,11 +190,11 @@ export const OpinionModerationPage: React.FC = () => {
           const btnClass = confirmAction.type === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : confirmAction.type === 'reject' ? 'bg-red-600 hover:bg-red-700' : confirmAction.type === 'pending' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700';
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-              <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl text-center space-y-4">
+              <div ref={confirmDialogRef} className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl text-center space-y-4" role="dialog" aria-modal="true" aria-labelledby="opinion-confirm-title">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 text-slate-600 shadow-sm">
                   <AlertTriangle className="h-6 w-6" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+                <h3 id="opinion-confirm-title" className="text-sm font-bold text-slate-800">{title}</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
                   {confirmAction.type === 'delete'
                     ? 'Esta acción no se puede deshacer. La opinión se eliminará permanentemente.'
@@ -222,6 +224,10 @@ export const OpinionModerationPage: React.FC = () => {
           );
         })()}
       </section>
+
+      <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-950" role="note">
+        Esta moderación es local a este navegador (localStorage); los cambios no se persisten en Supabase ni son visibles para otros usuarios.
+      </p>
     </div>
   );
 };

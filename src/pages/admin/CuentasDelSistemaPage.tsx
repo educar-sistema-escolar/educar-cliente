@@ -11,6 +11,7 @@ import {
 import { listStudents } from '../../features/admin/services/academicRepository';
 import type { Student } from '../../features/admin/types';
 import { toUserFacingError } from '../../shared/utils/userFacingError';
+import { useAccessibleDialog } from '../../shared/hooks/useAccessibleDialog';
 
 const roleLabels: Record<AdminAccountRole, string> = {
   student: 'Alumno',
@@ -74,6 +75,7 @@ export const CuentasDelSistemaPage: React.FC = () => {
     setFormData({ full_name: '', email: '', role: '' });
     setShowCreateModal(false);
   };
+  const createDialogRef = useAccessibleDialog<HTMLDivElement>(showCreateModal, resetForm);
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -228,8 +230,8 @@ export const CuentasDelSistemaPage: React.FC = () => {
 
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 className="text-sm font-bold text-edu-primary">Invitar usuario</h2><p className="text-[10px] text-slate-500">La persona recibirá un enlace para configurar su contraseña.</p></div><button type="button" onClick={resetForm} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={16} /></button></div>
+          <div ref={createDialogRef} className="w-full max-w-lg rounded-2xl bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="invite-user-title">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 id="invite-user-title" className="text-sm font-bold text-edu-primary">Invitar usuario</h2><p className="text-[10px] text-slate-500">La persona recibirá un enlace para configurar su contraseña.</p></div><button type="button" aria-label="Cerrar invitación" onClick={resetForm} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl p-1.5 text-slate-400 hover:bg-slate-100"><X size={16} aria-hidden="true" /></button></div>
             <form onSubmit={handleCreate} className="space-y-4 p-5">
               <label className="block space-y-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-700">Nombre completo<input required value={formData.full_name} onChange={(event) => setFormData((current) => ({ ...current, full_name: event.target.value }))} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs font-normal normal-case tracking-normal outline-none focus:border-edu-secondary" /></label>
               <label className="block space-y-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-700">Correo electrónico<input required type="email" value={formData.email} onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))} className="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs font-normal normal-case tracking-normal outline-none focus:border-edu-secondary" /></label>

@@ -269,7 +269,7 @@ export const ForoFeedPage: React.FC = () => {
         {/* Left Sidebar: Categories (Desktop only) */}
         <aside className="hidden lg:block space-y-6">
           <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
-            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Categorías</h3>
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Categorías</h3>
             <nav className="flex flex-col gap-1">
               {['Todas', 'Académico', 'Vida Escolar', 'Grupos de Estudio', 'Intercambio', 'Deportes'].map((cat) => {
                 const active = (cat === 'Todas' && !searchParams.get('category')) || searchParams.get('category') === cat;
@@ -285,7 +285,7 @@ export const ForoFeedPage: React.FC = () => {
                         : 'text-slate-500 hover:bg-slate-50 hover:text-edu-secondary'
                     } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                   >
-                    <div className={active ? 'text-edu-secondary' : 'text-slate-400'}>
+                    <div className={active ? 'text-edu-secondary' : 'text-slate-500'}>
                       {categoryIcons[cat]}
                     </div>
                     <span>{cat}</span>
@@ -333,7 +333,7 @@ export const ForoFeedPage: React.FC = () => {
                 className={`inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-bold uppercase tracking-wider cursor-pointer transition-all sm:px-3 ${
                   activeTab === 'recent' 
                     ? 'border-b-2 border-edu-secondary text-edu-primary' 
-                    : 'text-slate-400 hover:text-slate-600'
+                    : 'text-slate-500 hover:text-slate-600'
                 }`}
               >
                 Recientes
@@ -345,7 +345,7 @@ export const ForoFeedPage: React.FC = () => {
                 className={`inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-bold uppercase tracking-wider cursor-pointer transition-all sm:px-3 ${
                   activeTab === 'trending' 
                     ? 'border-b-2 border-edu-secondary text-edu-primary' 
-                    : 'text-slate-400 hover:text-slate-600'
+                    : 'text-slate-500 hover:text-slate-600'
                 }`}
               >
                 Populares (Respuestas)
@@ -357,13 +357,13 @@ export const ForoFeedPage: React.FC = () => {
                 className={`inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-bold uppercase tracking-wider cursor-pointer transition-all sm:px-3 ${
                   activeTab === 'popular' 
                     ? 'border-b-2 border-edu-secondary text-edu-primary' 
-                    : 'text-slate-400 hover:text-slate-600'
+                    : 'text-slate-500 hover:text-slate-600'
                 }`}
               >
                 Más Valoradas
               </button>
             </div>
-            <div className="text-slate-400 flex items-center gap-1.5 text-xs font-semibold">
+            <div className="text-slate-500 flex items-center gap-1.5 text-xs font-semibold">
               <Filter size={14} />
               <span className="hidden sm:inline">Filtrado: {currentCategory}</span>
             </div>
@@ -382,7 +382,7 @@ export const ForoFeedPage: React.FC = () => {
                 <FileText size={28} />
               </div>
               <h3 className="text-sm font-bold text-slate-800">No hay discusiones</h3>
-              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
                 No se encontraron publicaciones que coincidan con la búsqueda actual.
               </p>
             </div>
@@ -401,13 +401,13 @@ export const ForoFeedPage: React.FC = () => {
                       aria-label={`Votar a favor: ${disc.title}`}
                       aria-pressed={disc.userVoted === 'up'}
                       className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
-                        disc.userVoted === 'up' ? 'text-green-600' : 'text-slate-400'
+                        disc.userVoted === 'up' ? 'text-green-700' : 'text-slate-500'
                       } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                     >
                       <ChevronUp size={18} />
                     </button>
                     <span className={`text-xs font-bold leading-none ${
-                      disc.userVoted === 'up' ? 'text-green-600' : disc.userVoted === 'down' ? 'text-red-500' : 'text-slate-700'
+                      disc.userVoted === 'up' ? 'text-green-700' : disc.userVoted === 'down' ? 'text-red-700' : 'text-slate-700'
                     }`}>
                       {disc.score}
                     </span>
@@ -417,7 +417,7 @@ export const ForoFeedPage: React.FC = () => {
                       aria-label={`Votar en contra: ${disc.title}`}
                       aria-pressed={disc.userVoted === 'down'}
                       className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-slate-200/50 transition-colors cursor-pointer ${
-                        disc.userVoted === 'down' ? 'text-red-500' : 'text-slate-400'
+                        disc.userVoted === 'down' ? 'text-red-700' : 'text-slate-500'
                       } focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary`}
                     >
                       <ChevronDown size={18} />
@@ -430,7 +430,7 @@ export const ForoFeedPage: React.FC = () => {
                       <span className="px-2 py-0.5 bg-edu-secondary/10 text-edu-primary text-[9px] font-bold uppercase rounded-full tracking-wider">
                         {disc.category}
                       </span>
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-[10px] text-slate-500">
                         Publicado por <strong className="text-slate-500 font-semibold">{disc.authorName}</strong> • {disc.date}
                       </span>
                     </div>
@@ -450,7 +450,7 @@ export const ForoFeedPage: React.FC = () => {
                       <div className="flex gap-4">
                         <Link 
                           to={`/alumnos/foro/discusion/${disc.id}`}
-                          className="inline-flex min-h-11 items-center gap-1.5 rounded px-2 text-[10px] font-bold text-slate-400 hover:text-edu-secondary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary"
+                          className="inline-flex min-h-11 items-center gap-1.5 rounded px-2 text-[10px] font-bold text-slate-500 hover:text-edu-secondary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary"
                         >
                           <MessageSquare size={13} />
                           <span>{disc.repliesCount} respuestas</span>
@@ -503,7 +503,7 @@ export const ForoFeedPage: React.FC = () => {
                 type="button"
                 aria-label="Cerrar formulario"
                 onClick={handleCloseModal}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary"
               >
                 <X size={18} />
               </button>
@@ -535,7 +535,7 @@ export const ForoFeedPage: React.FC = () => {
               {/* Title */}
               <div className="space-y-1">
                 <label htmlFor="forum-post-title" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
-                  Título de la Discusión <span className="text-red-500">*</span>
+                  Título de la Discusión <span className="text-red-700">*</span>
                 </label>
                 <input
                   id="forum-post-title"
@@ -545,7 +545,7 @@ export const ForoFeedPage: React.FC = () => {
                   placeholder="Ej: ¿Bibliografía recomendada para Análisis Matemático I?"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="min-h-11 w-full px-3 bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                  className="min-h-11 w-full px-3 bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg text-sm text-slate-800 placeholder:text-slate-500 focus:outline-none"
                   required
                 />
               </div>
@@ -553,7 +553,7 @@ export const ForoFeedPage: React.FC = () => {
               {/* Lead / Short Summary */}
               <div className="space-y-1">
                 <label htmlFor="forum-post-lead" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
-                  Introducción / Resumen Breve <span className="text-red-500">*</span>
+                  Introducción / Resumen Breve <span className="text-red-700">*</span>
                 </label>
                 <input
                   id="forum-post-lead"
@@ -562,7 +562,7 @@ export const ForoFeedPage: React.FC = () => {
                   placeholder="Añade un subtítulo breve para el feed (máx 120 car.)..."
                   value={newLead}
                   onChange={(e) => setNewLead(e.target.value)}
-                  className="min-h-11 w-full px-3 bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                  className="min-h-11 w-full px-3 bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg text-sm text-slate-800 placeholder:text-slate-500 focus:outline-none"
                   required
                 />
               </div>
@@ -570,7 +570,7 @@ export const ForoFeedPage: React.FC = () => {
               {/* Content Body */}
               <div className="space-y-1">
                 <label htmlFor="forum-post-content" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
-                  Explicación / Contenido de la Consulta <span className="text-red-500">*</span>
+                  Explicación / Contenido de la Consulta <span className="text-red-700">*</span>
                 </label>
                 <textarea
                   id="forum-post-content"
@@ -578,7 +578,7 @@ export const ForoFeedPage: React.FC = () => {
                   maxLength={10000}
                   value={newBody}
                   onChange={(e) => setNewBody(e.target.value)}
-                  className="w-full h-32 bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg p-3 text-xs text-slate-700 focus:outline-none placeholder:text-slate-400"
+                  className="w-full h-32 bg-slate-50 border border-slate-200 focus:border-edu-secondary focus:ring-2 focus:ring-edu-secondary/20 rounded-lg p-3 text-xs text-slate-700 focus:outline-none placeholder:text-slate-500"
                   required
                 />
               </div>

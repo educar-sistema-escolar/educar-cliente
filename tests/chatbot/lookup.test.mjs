@@ -47,7 +47,7 @@ async function rig(options = {}) {
       return query;
     },
   };
-  const context = vm.createContext({ client });
+  const context = vm.createContext({ client, setTimeout, clearTimeout });
   const modules = new Map();
   const boundary = new vm.SourceTextModule('export const supabase = client; export function requireSupabase() { return client; }', { context });
   function source(path) {

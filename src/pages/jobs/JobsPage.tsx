@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import imagenHero from '../../assets/service/hero-trabaja-con-nosotros.png';
+import { Button } from '../../shared/components/ui/Button';
 
 /**
  * Página de Postulación Laboral "Trabajá con Nosotros".
@@ -87,7 +88,7 @@ export const JobsPage: React.FC = () => {
     }
   };
 
-  // Validador final y procesador del envío del formulario de postulación
+  // Prepare an email draft; this page has no application endpoint or CV storage.
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.phone) {
@@ -100,6 +101,17 @@ export const JobsPage: React.FC = () => {
     }
 
     setError(null);
+    const subject = `Postulación laboral: ${formData.position}`;
+    const body = [
+      `Nombre: ${formData.name.trim()}`,
+      `Correo: ${formData.email.trim()}`,
+      `Teléfono: ${formData.phone.trim()}`,
+      `Puesto: ${formData.position}`,
+      `Archivo CV para adjuntar: ${selectedFile.name}`,
+      '',
+      formData.message.trim(),
+    ].join('\n');
+    window.location.href = `mailto:contacto@educarparatransformar.edu.ar?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     setIsSubmitted(true); // Cambia el estado para desplegar la confirmación de éxito
   };
 
@@ -138,26 +150,27 @@ export const JobsPage: React.FC = () => {
 
           {isSubmitted ? (
             /* Pantalla Animada de Éxito */
-            <div className="text-center py-8 space-y-4 animate-scaleUp">
+              <div className="text-center py-8 space-y-4 animate-scaleUp" role="status" aria-live="polite">
               <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
                 <CheckCircle2 size={36} />
               </div>
-              <h3 className="text-sm font-bold text-edu-dark">¡Postulación recibida con éxito!</h3>
+              <h3 className="text-sm font-bold text-edu-dark">Borrador de postulación preparado</h3>
               <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
-                Muchas gracias por tu interés en formar parte de <strong>Educar para Transformar</strong>. Nuestro equipo de recursos humanos evaluará tu CV y se pondrá en contacto si tu perfil coincide con alguna vacante disponible.
+                Intentamos abrir tu aplicación de correo. Si se abrió, revisá el mensaje, adjuntá manualmente el archivo <strong>{selectedFile?.name}</strong> y presioná Enviar. La página no transmite el CV ni puede confirmar la recepción.
               </p>
-              <button
+              <Button
                 onClick={handleReset}
-                className="mt-4 bg-edu-primary hover:bg-edu-primary/95 text-white font-semibold text-xs px-5 py-2.5 rounded shadow-sm transition-all cursor-pointer"
+                variant="secondary"
+                className="mt-4"
               >
                 ENVIAR OTRA POSTULACIÓN
-              </button>
+              </Button>
             </div>
           ) : (
             /* Formulario Interactivo */
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="p-3 bg-red-50 border border-red-100 rounded text-[11px] text-red-600 flex items-center gap-2">
+                <div className="p-3 bg-red-50 border border-red-200 rounded text-[11px] text-red-800 flex items-center gap-2" role="alert">
                   <AlertCircle size={14} className="shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -165,11 +178,12 @@ export const JobsPage: React.FC = () => {
 
               {/* Nombre completo */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wide">
+                <label htmlFor="job-name" className="block text-[10px] font-semibold text-slate-700 uppercase tracking-wide">
                   Nombre completo *
                 </label>
                 <input
                   type="text"
+                  id="job-name"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
@@ -183,11 +197,12 @@ export const JobsPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Correo */}
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wide">
+                  <label htmlFor="job-email" className="block text-[10px] font-semibold text-slate-700 uppercase tracking-wide">
                     Correo electrónico *
                   </label>
                   <input
                     type="email"
+                    id="job-email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
@@ -198,11 +213,12 @@ export const JobsPage: React.FC = () => {
                 </div>
                 {/* Teléfono */}
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wide">
+                  <label htmlFor="job-phone" className="block text-[10px] font-semibold text-slate-700 uppercase tracking-wide">
                     Teléfono de contacto *
                   </label>
                   <input
                     type="tel"
+                    id="job-phone"
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
@@ -215,10 +231,11 @@ export const JobsPage: React.FC = () => {
 
               {/* Puesto deseado */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wide">
+                <label htmlFor="job-position" className="block text-[10px] font-semibold text-slate-700 uppercase tracking-wide">
                   Puesto al que se postula *
                 </label>
                 <select
+                  id="job-position"
                   name="position"
                   value={formData.position}
                   onChange={handleInputChange}
@@ -234,43 +251,50 @@ export const JobsPage: React.FC = () => {
 
               {/* Área interactiva Drag-and-Drop de PDF */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wide">
+                <label htmlFor="job-cv" className="block text-[10px] font-semibold text-slate-700 uppercase tracking-wide">
                   Adjuntar Currículum Vitae (PDF) *
                 </label>
                 
                 <input
+                  id="job-cv"
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   accept=".pdf"
-                  className="hidden"
+                  aria-label="Seleccionar currículum en PDF"
+                  className="sr-only"
                 />
 
                 <div
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-edu-accent/40 hover:border-edu-primary/60 transition-colors p-5 text-center rounded-lg cursor-pointer bg-[#F8FAFC]/50 flex flex-col items-center justify-center space-y-1.5"
+                  className="border-2 border-dashed border-slate-300 p-5 text-center rounded-xl bg-slate-50 flex flex-col items-center justify-center gap-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20"
                 >
                   {selectedFile ? (
-                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded px-3 py-2 text-xs text-edu-dark shadow-sm">
+                    <div className="flex flex-wrap items-center justify-center gap-2 bg-white border border-slate-200 rounded px-3 py-2 text-xs text-edu-dark shadow-sm">
                       <FileText size={16} className="text-edu-primary shrink-0" />
                       <span className="font-semibold max-w-[220px] truncate">{selectedFile.name}</span>
-                      <button
+                      <Button
                         type="button"
                         onClick={removeFile}
-                        className="text-slate-400 hover:text-red-500 transition-colors shrink-0 p-0.5 cursor-pointer"
+                        variant="danger"
+                        size="sm"
+                        aria-label={`Quitar archivo ${selectedFile.name}`}
+                        className="min-h-9 px-2"
                       >
                         <X size={14} />
-                      </button>
+                      </Button>
                     </div>
                   ) : (
                     <>
                       <Upload size={22} className="text-edu-primary" />
-                      <span className="text-[10px] text-edu-primary font-semibold">
-                        Hacé clic para seleccionar o arrastrá tu archivo aquí
+                      <Button type="button" variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
+                        Seleccionar CV PDF
+                      </Button>
+                      <span className="text-[10px] text-slate-700">
+                        También podés arrastrar el archivo aquí
                       </span>
-                      <span className="text-[8px] text-slate-400">
+                      <span className="text-[10px] text-slate-600">
                         Formatos permitidos: PDF. Máx 5MB
                       </span>
                     </>
@@ -280,10 +304,11 @@ export const JobsPage: React.FC = () => {
 
               {/* Mensaje o presentación breve */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wide">
+                <label htmlFor="job-message" className="block text-[10px] font-semibold text-slate-700 uppercase tracking-wide">
                   Breve presentación / Mensaje
                 </label>
                 <textarea
+                  id="job-message"
                   name="message"
                   value={formData.message}
                   onChange={handleInputChange}
@@ -293,12 +318,13 @@ export const JobsPage: React.FC = () => {
               </div>
 
               {/* Botón de envío */}
-              <button
+              <Button
                 type="submit"
-                className="w-full bg-edu-secondary hover:bg-edu-secondary/90 text-white font-bold text-xs py-3 rounded shadow-sm transition-all cursor-pointer uppercase tracking-wider"
+                size="lg"
+                className="w-full uppercase tracking-wider"
               >
                 ENVIAR POSTULACIÓN
-              </button>
+              </Button>
             </form>
           )}
         </div>

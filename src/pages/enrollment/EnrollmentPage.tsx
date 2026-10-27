@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
@@ -11,12 +11,14 @@ import {
   Send,
   ShieldCheck,
 } from 'lucide-react';
-import { createEnrollmentRequest } from '../../features/inscripcion/services/enrollmentStore';
+import { createEnrollmentRequest, getStudentAcademicEnrollmentStatus, listAvailableEnrollmentYears } from '../../features/inscripcion/services/enrollmentStore';
 import type { EnrollmentRequest } from '../../features/inscripcion/types';
+import { educationalLevelLabel } from '../../shared/utils/educationalLevelLabel';
 
 type EnrollmentLevel = 'Inicial' | 'Primario' | 'Secundario';
 
 type FormState = {
+  academicYear: number;
   studentFirstName: string;
   studentLastName: string;
   studentDni: string;
@@ -44,26 +46,28 @@ const levelOptions: Array<{
 }> = [
   {
     level: 'Inicial',
-    title: 'Nivel Inicial',
+    title: 'Inicial',
     description: 'Primeros pasos en un entorno cuidado.',
     icon: <span className="text-[3.1rem] leading-none">🧸</span>,
     courses: ['Sala de 3 años', 'Sala de 4 años', 'Sala de 5 años'],
   },
   {
     level: 'Primario',
-    title: 'Nivel Primario',
+    title: 'Primaria',
     description: 'Aprendizaje integral y acompanado.',
     icon: <span className="text-[3.1rem] leading-none">📚</span>,
     courses: ['1° Grado', '2° Grado', '3° Grado', '4° Grado', '5° Grado', '6° Grado', '7° Grado'],
   },
   {
     level: 'Secundario',
-    title: 'Nivel Secundario',
+    title: 'Secundaria',
     description: 'Proyecto de vida y autonomia.',
     icon: <span className="text-[3.1rem] leading-none">🎓</span>,
     courses: ['1° Año', '2° Año', '3° Año', '4° Año', '5° Año'],
   },
 ];
+
+type LinkedEnrollmentStatus = 'checking' | 'available' | 'enrolled' | 'pending' | 'already-requested' | 'unavailable';
 
 const steps = [
   'Nivel educativo',
@@ -73,6 +77,7 @@ const steps = [
 ];
 
 const initialForm: FormState = {
+  academicYear: new Date().getFullYear(),
   studentFirstName: '',
   studentLastName: '',
   studentDni: '',
@@ -114,10 +119,10 @@ function getCourses(level: EnrollmentLevel) {
 function formatRequestNumber(request: EnrollmentRequest | null) {
   const fallback = '000123';
   const source = request?.id.replace(/\D/g, '').slice(0, 6).padStart(6, '0') || fallback;
-  return `#EPT-2026-${source}`;
+  return `#EPT-${request?.academicYear ?? new Date().getFullYear()}-${source}`;
 }
 
-function StepHero({ activeStep }: { activeStep: number }) {
+function StepHero({ activeStep, academicYear }: { activeStep: number; academicYear: number }) {
   return (
     <section className="relative overflow-hidden rounded-b-[28px] bg-edu-primary px-5 pb-12 pt-6 text-white shadow-[0_18px_40px_rgba(20,82,200,0.22)] md:rounded-[20px] md:px-10 md:pb-14 md:pt-8">
       <SchoolLineArt />
@@ -133,7 +138,7 @@ function StepHero({ activeStep }: { activeStep: number }) {
         </div>
 
         <h1 className="mt-8 text-[2.35rem] font-extrabold leading-none tracking-[-0.01em] md:text-[3.65rem]">
-          Inscripción 2026
+          Inscripción {academicYear}
         </h1>
         <p className="mt-3 text-base font-medium text-white/95 md:text-lg">
           Completá la solicitud de admisión en pocos pasos.
@@ -293,7 +298,7 @@ function SelectField({
       >
         {options.map((option) => (
           <option key={option} value={option}>
-            {option}
+            {name === 'educationalLevel' ? educationalLevelLabel(option) : option}
           </option>
         ))}
       </select>
@@ -371,13 +376,75 @@ function isValidEmail(value: string) {
 }
 
 export const EnrollmentPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const requestedAcademicYear = Number(searchParams.get('academicYear'));
+  const linkedStudentId = searchParams.get('studentId') ?? undefined;
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState<FormState>(initialForm);
+  const [formData, setFormData] = useState<FormState>(() => ({
+    ...initialForm,
+    academicYear: Number.isInteger(requestedAcademicYear) && requestedAcademicYear >= 1900 && requestedAcademicYear <= 2200
+      ? requestedAcademicYear
+      : initialForm.academicYear,
+  }));
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [isLoadingAcademicYears, setIsLoadingAcademicYears] = useState(true);
+  const [academicYearError, setAcademicYearError] = useState<string | null>(null);
+  const [linkedEnrollmentCheck, setLinkedEnrollmentCheck] = useState<{ key: string; status: LinkedEnrollmentStatus } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submittedRequest, setSubmittedRequest] = useState<EnrollmentRequest | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const requestNumber = useMemo(() => formatRequestNumber(submittedRequest), [submittedRequest]);
+
+  useEffect(() => {
+    let active = true;
+    void listAvailableEnrollmentYears()
+      .then((years) => {
+        if (!active) return;
+        const sortedYears = [...new Set(years)].filter((year) => year >= new Date().getFullYear()).sort((a, b) => a - b);
+        setAvailableYears(sortedYears);
+        if (!sortedYears.length) {
+          setAcademicYearError('No hay ciclos lectivos habilitados para recibir solicitudes. Consultá con Dirección.');
+          return;
+        }
+        setAcademicYearError(null);
+        setFormData((current) => ({
+          ...current,
+          academicYear: sortedYears.includes(requestedAcademicYear) ? requestedAcademicYear : sortedYears[0],
+        }));
+      })
+      .catch(() => {
+        if (active) setAcademicYearError('No se pudieron consultar los ciclos habilitados. Volvé a intentarlo más tarde.');
+      })
+      .finally(() => { if (active) setIsLoadingAcademicYears(false); });
+    return () => { active = false; };
+  }, [requestedAcademicYear]);
+
+  const linkedEnrollmentCheckKey = linkedStudentId ? `${linkedStudentId}:${formData.academicYear}` : null;
+  const linkedEnrollmentStatus: LinkedEnrollmentStatus | null = linkedStudentId
+    ? linkedEnrollmentCheck?.key === linkedEnrollmentCheckKey ? linkedEnrollmentCheck.status : 'checking'
+    : null;
+
+  useEffect(() => {
+    if (!linkedStudentId) return;
+    let active = true;
+    void getStudentAcademicEnrollmentStatus(linkedStudentId, formData.academicYear)
+      .then((status) => { if (active) setLinkedEnrollmentCheck({ key: `${linkedStudentId}:${formData.academicYear}`, status }); })
+      .catch(() => { if (active) setLinkedEnrollmentCheck({ key: `${linkedStudentId}:${formData.academicYear}`, status: 'unavailable' }); });
+    return () => { active = false; };
+  }, [linkedStudentId, formData.academicYear]);
+
+  const linkedEnrollmentMessage = linkedEnrollmentStatus === 'checking'
+    ? 'Verificando el estado de matrícula de este alumno…'
+    : linkedEnrollmentStatus === 'enrolled'
+      ? `Este alumno ya tiene una matrícula activa para el ciclo ${formData.academicYear}. Los cambios se gestionan con Dirección.`
+      : linkedEnrollmentStatus === 'pending'
+        ? `Ya hay una solicitud pendiente para el ciclo ${formData.academicYear}. Dirección la está revisando.`
+        : linkedEnrollmentStatus === 'already-requested'
+          ? `Ya existe un trámite de inscripción registrado para el ciclo ${formData.academicYear}.`
+          : linkedEnrollmentStatus === 'unavailable'
+            ? 'No pudimos verificar que este alumno pueda solicitar una matrícula. Volvé al portal y consultá con Dirección.'
+            : null;
 
   const selectedCourses = getCourses(formData.educationalLevel);
 
@@ -385,9 +452,10 @@ export const EnrollmentPage: React.FC = () => {
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
     const { name, value, type } = event.target;
-    const nextValue =
-      type === 'checkbox'
-        ? (event.target as HTMLInputElement).checked
+    const nextValue = type === 'checkbox'
+      ? (event.target as HTMLInputElement).checked
+      : name === 'academicYear'
+        ? Number(value)
         : value;
 
     setFormData((current) => ({ ...current, [name]: nextValue }));
@@ -418,6 +486,9 @@ export const EnrollmentPage: React.FC = () => {
     const errors: FieldErrors = {};
 
     if (step === 1) {
+      if (!availableYears.includes(formData.academicYear)) {
+        errors.academicYear = 'Seleccioná un ciclo lectivo habilitado.';
+      }
       if (!formData.educationalLevel || !formData.schoolYear) {
         errors.schoolYear = 'Seleccioná un curso.';
       }
@@ -533,7 +604,7 @@ export const EnrollmentPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const request = createEnrollmentRequest(formData);
+      const request = createEnrollmentRequest(formData, linkedStudentId);
       setSubmittedRequest(await request);
       setStep(5);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -550,7 +621,7 @@ export const EnrollmentPage: React.FC = () => {
 
   if (step === 5) {
     return (
-      <main className="min-h-screen bg-[#F4F0E8] px-4 py-10 font-sans text-[#18304D] md:py-16">
+      <section className="min-h-screen bg-[#F4F0E8] px-4 py-10 font-sans text-[#18304D] md:py-16">
         <section className="mx-auto grid min-h-[620px] max-w-[760px] place-items-center rounded-[20px] bg-[radial-gradient(circle_at_center,#fff_0%,#fff_45%,#F4F0E8_100%)] px-4">
           <div className="w-full max-w-[520px] rounded-[24px] bg-white px-7 py-10 text-center shadow-[0_24px_70px_rgba(24,48,77,0.13)] md:px-12 md:py-12">
             <div className="relative mx-auto mb-7 grid h-28 w-28 place-items-center">
@@ -594,14 +665,14 @@ export const EnrollmentPage: React.FC = () => {
             </div>
           </div>
         </section>
-      </main>
+      </section>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#F4F0E8] font-sans text-[#18304D]">
+    <section className="min-h-screen bg-[#F4F0E8] font-sans text-[#18304D]">
       <div className="mx-auto max-w-[1180px] px-3 pb-10 md:px-4 md:pt-4">
-        <StepHero activeStep={step} />
+        <StepHero activeStep={step} academicYear={formData.academicYear} />
 
         <section className="-mt-5 grid gap-4 rounded-t-[24px] bg-white/70 p-3 shadow-[0_-2px_0_rgba(255,255,255,0.75)] md:grid-cols-[1fr_300px] md:gap-4 md:p-5 lg:grid-cols-[1fr_310px]">
           <form
@@ -611,6 +682,11 @@ export const EnrollmentPage: React.FC = () => {
             {error && (
               <div className="mb-5 rounded-[14px] border border-red-100 bg-red-50 px-4 py-3 text-[13px] font-semibold text-red-700">
                 {error}
+              </div>
+            )}
+            {linkedEnrollmentMessage && linkedEnrollmentStatus !== 'available' && (
+              <div className="mb-5 rounded-[14px] border border-blue-100 bg-[#F2F7FF] px-4 py-3 text-[13px] font-semibold leading-5 text-edu-primary" role={linkedEnrollmentStatus === 'checking' ? 'status' : 'alert'}>
+                {linkedEnrollmentMessage}
               </div>
             )}
 
@@ -677,7 +753,20 @@ export const EnrollmentPage: React.FC = () => {
                   </div>
                 </div>
 
-                <ButtonRow canGoBack={false} onBack={goBack} onNext={goNext} />
+                <div className="mt-7 rounded-[14px] border border-[#DDE3EC] bg-[#F7FAFF] p-4">
+                  <SelectField
+                    label="Ciclo lectivo"
+                    name="academicYear"
+                    value={String(formData.academicYear)}
+                    options={availableYears.map(String)}
+                    onChange={updateField}
+                    error={fieldErrors.academicYear}
+                  />
+                  {isLoadingAcademicYears && <p className="mt-2 text-xs text-[#68758A]" role="status">Consultando ciclos habilitados…</p>}
+                  {academicYearError && <p className="mt-2 text-xs font-semibold text-amber-800" role="alert">{academicYearError}</p>}
+                </div>
+
+                <ButtonRow canGoBack={false} onBack={goBack} onNext={goNext} disabled={isLoadingAcademicYears || !availableYears.length || Boolean(linkedStudentId && linkedEnrollmentStatus !== 'available')} />
               </div>
             )}
 
@@ -712,11 +801,12 @@ export const EnrollmentPage: React.FC = () => {
                       <SelectField label="Nivel educativo" name="educationalLevel" value={formData.educationalLevel} options={['Inicial', 'Primario', 'Secundario']} onChange={(event) => chooseLevel(event.target.value as EnrollmentLevel)} error={fieldErrors.educationalLevel} />
                       <SelectField label="Sala o curso" name="schoolYear" value={formData.schoolYear} options={selectedCourses} onChange={updateField} error={fieldErrors.schoolYear} />
                       <SelectField label="Turno" name="turn" value={formData.turn} options={['Mañana', 'Tarde', 'Jornada completa']} onChange={updateField} error={fieldErrors.turn} />
+                      <SelectField label="Ciclo lectivo" name="academicYear" value={String(formData.academicYear)} options={availableYears.map(String)} onChange={updateField} error={fieldErrors.academicYear} />
                     </div>
                   </section>
                 </div>
 
-                <ButtonRow canGoBack onBack={goBack} onNext={goNext} />
+                <ButtonRow canGoBack onBack={goBack} onNext={goNext} disabled={Boolean(linkedStudentId && linkedEnrollmentStatus !== 'available')} />
               </div>
             )}
 
@@ -774,9 +864,10 @@ export const EnrollmentPage: React.FC = () => {
                   </h3>
                   <dl className="space-y-3">
                     <SummaryLine label="Alumno" value={`${formData.studentFirstName} ${formData.studentLastName}`.trim()} />
-                    <SummaryLine label="Nivel educativo" value={formData.educationalLevel} />
+                    <SummaryLine label="Nivel educativo" value={educationalLevelLabel(formData.educationalLevel) ?? formData.educationalLevel} />
                     <SummaryLine label="Sala o curso" value={formData.schoolYear} />
                     <SummaryLine label="Turno" value={formData.turn} />
+                    <SummaryLine label="Ciclo lectivo" value={String(formData.academicYear)} />
                     <SummaryLine label="Responsable" value={formData.responsibleFullName} />
                     <SummaryLine label="Correo electrónico" value={formData.email} />
                     <SummaryLine label="Teléfono" value={formData.phone} />
@@ -823,6 +914,6 @@ export const EnrollmentPage: React.FC = () => {
           <SidePanel />
         </section>
       </div>
-    </main>
+    </section>
   );
 };

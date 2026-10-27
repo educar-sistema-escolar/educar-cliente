@@ -9,21 +9,21 @@ import lifeDeportes from '../../../assets/service/life-deportes.png';
 const cardItems = [
   {
     id: 'inicial',
-    title: 'Nivel Inicial',
+    title: 'Inicial',
     subtitle: 'Juego y Exploracion',
     desc: 'Iniciamos el aprendizaje estimulando la curiosidad natural a traves de la socializacion creativa.',
     img: lifeInicial,
   },
   {
     id: 'primario',
-    title: 'Nivel Primario',
+    title: 'Primaria',
     subtitle: 'Habilidades Fundamentales',
     desc: 'Formamos las bases academicas solidas con ingles intensivo, artes y valores esenciales.',
     img: lifePrimario,
   },
   {
     id: 'secundario',
-    title: 'Nivel Secundario',
+    title: 'Secundaria',
     subtitle: 'Tecnologia y Futuro',
     desc: 'Preparacion de excelencia enfocada en IT, economia y competencias para el siglo XXI.',
     img: lifeSecundario,

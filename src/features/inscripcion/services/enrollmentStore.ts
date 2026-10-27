@@ -175,18 +175,19 @@ export async function getEnrollmentStatusCount(status: EnrollmentStatus) {
   return (await listEnrollmentRequests(status)).length;
 }
 
-export async function createEnrollmentRequest(input: EnrollmentRequestInput) {
+export async function createEnrollmentRequest(input: EnrollmentRequestInput, linkedStudentId?: string) {
   const normalized = validateEnrollmentInput(input);
   const { data, error } = await requireSupabase().rpc('submit_enrollment_request', {
     p_payload: {
       studentFirstName: normalized.studentFirstName,
       studentLastName: normalized.studentLastName,
       studentDni: normalized.studentDni,
+      studentId: linkedStudentId ?? null,
       birthDate: normalized.birthDate,
       educationalLevel: normalized.educationalLevel,
       schoolYear: normalized.schoolYear,
       turn: normalized.turn,
-      academicYear: new Date().getFullYear(),
+      academicYear: normalized.academicYear ?? new Date().getFullYear(),
       responsibleFullName: normalized.responsibleFullName,
       responsibleDni: normalized.responsibleDni,
       responsibleRelation: normalized.responsibleRelation,
@@ -201,6 +202,21 @@ export async function createEnrollmentRequest(input: EnrollmentRequestInput) {
   const request = mapRequest(data as EnrollmentRequestRow);
   notifyEnrollmentUpdated();
   return request;
+}
+
+export async function listAvailableEnrollmentYears(): Promise<number[]> {
+  const { data, error } = await requireSupabase().rpc('list_available_enrollment_years');
+  if (error) throw repositoryError(error.message);
+  return ((data ?? []) as Array<{ academic_year: number }>).map((row) => Number(row.academic_year));
+}
+
+export async function getStudentAcademicEnrollmentStatus(studentId: string, academicYear: number) {
+  const { data, error } = await requireSupabase().rpc('get_student_academic_enrollment_status', {
+    p_student_id: studentId,
+    p_academic_year: academicYear,
+  });
+  if (error) throw repositoryError(error.message);
+  return data as 'available' | 'enrolled' | 'pending' | 'already-requested';
 }
 
 export async function approveEnrollmentRequest(requestId: string, courseId: string) {

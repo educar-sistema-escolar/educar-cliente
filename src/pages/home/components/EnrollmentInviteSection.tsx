@@ -11,12 +11,12 @@ const steps = [
   {
     icon: <BookOpenCheck className="h-5 w-5" />,
     title: 'Queda registrada',
-    text: 'La solicitud se guarda en esta demo y el equipo institucional puede revisarla desde su panel.',
+    text: 'El formulario registra la solicitud en el sistema institucional y muestra el número cuando Supabase confirma el envío.',
   },
   {
     icon: <HeartHandshake className="h-5 w-5" />,
     title: 'Seguimos el contacto',
-    text: 'Luego el colegio puede marcar el estado de seguimiento sin depender de un backend nuevo.',
+    text: 'Administración actualiza el estado desde su panel y el equipo puede continuar el seguimiento con la familia.',
   },
 ];
 

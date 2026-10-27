@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useAccessibleDialog } from '../../shared/hooks/useAccessibleDialog';
 import { Link } from 'react-router-dom';
 import { 
   Plus, 
@@ -16,14 +17,11 @@ import { newsStore } from '../../features/noticias/services/newsStore';
 import type { Article } from '../../features/noticias/services/newsStore';
 
 export const GestionNoticiasPage: React.FC = () => {
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<Article[]>(() => newsStore.getArticles());
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Todas');
   const [showDeleteModal, setShowDeleteModal] = useState<number | null>(null);
-
-  useEffect(() => {
-    setArticles(newsStore.getArticles());
-  }, []);
+  const deleteDialogRef = useAccessibleDialog<HTMLDivElement>(showDeleteModal !== null, () => setShowDeleteModal(null));
 
   const handleDelete = (id: number) => {
     newsStore.deleteArticle(id);
@@ -184,12 +182,12 @@ export const GestionNoticiasPage: React.FC = () => {
 
       {showDeleteModal !== null && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-edu-border text-center space-y-4">
+          <div ref={deleteDialogRef} className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-edu-border text-center space-y-4" role="dialog" aria-modal="true" aria-labelledby="delete-news-title">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-red-50 to-red-100 text-red-600 shadow-sm">
               <AlertTriangle size={22} />
             </div>
             <div className="space-y-1.5">
-              <h3 className="font-bold text-sm text-slate-800">¿Confirmás la eliminación?</h3>
+              <h3 id="delete-news-title" className="font-bold text-sm text-slate-800">¿Confirmás la eliminación?</h3>
               <p className="text-xs text-edu-muted leading-relaxed">
                 Se borrará permanentemente{' '}
                 <strong>"{articles.find(a => a.id === showDeleteModal)?.title}"</strong> del portal.

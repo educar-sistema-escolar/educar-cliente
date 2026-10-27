@@ -37,6 +37,14 @@ async function createApp(page) {
       // The existing administrator landing page uses this SELECT-only RPC during setup.
       if (state.role === 'superadmin' && request.method() === 'POST' && url.pathname === '/rest/v1/rpc/list_enrollment_requests') return json([]);
       if (state.role === 'superadmin' && request.method() === 'GET' && url.pathname === '/rest/v1/courses') return json([]);
+      // MAIN's portal reads configured cycles and its own enrollment status through these read-only RPCs.
+      if (request.method() === 'POST' && ['student', 'parent'].includes(state.role)) {
+        if (url.pathname === '/rest/v1/rpc/list_available_enrollment_years') return json([{ academic_year: 2026 }]);
+        if (url.pathname === '/rest/v1/rpc/get_student_academic_enrollment_status') {
+          const input = request.postDataJSON();
+          if (input.p_student_id === studentId && input.p_academic_year === 2026) return json('available');
+        }
+      }
       if (request.method() !== 'GET') {
         state.writes.push({ path: url.pathname, method: request.method() });
         return json({ message: 'Unexpected write blocked by test boundary' }, 403);
@@ -71,7 +79,8 @@ async function createApp(page) {
       async visit(path = '/alumnos') {
         await page.goto(path, { waitUntil: 'domcontentloaded' });
         if (state.role === 'student' && state.active && state.status === 'active' && state.authenticated) {
-          await expect(page.getByText('Portal del alumno', { exact: true })).toBeVisible({ timeout: 10000 });
+          const title = path.startsWith('/alumnos/foro') ? 'Foro estudiantil' : 'Portal del alumno';
+          await expect(page.getByRole('banner').getByText(title, { exact: true })).toBeVisible({ timeout: 10000 });
           if (path === '/alumnos') await expect(page.getByRole('heading', { name: state.linked ? 'Tu recorrido escolar, en un solo lugar.' : 'Tu legajo todavía no está vinculado' })).toBeVisible({ timeout: 10000 });
         } else {
           await expect(page).not.toHaveURL(/\/alumnos(?:\/|$)/, { timeout: 10000 });

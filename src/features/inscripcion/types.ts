@@ -5,6 +5,7 @@ export type EnrollmentStatus =
   | 'archived';
 
 export interface EnrollmentRequestInput {
+  academicYear?: number;
   studentFirstName: string;
   studentLastName: string;
   studentDni: string;

@@ -10,8 +10,8 @@ export type AdminReportDefinition = { code: AdminReportCode; label: string; colu
 const columns = (...entries: Array<[string, string]>): readonly AdminReportColumn[] => entries.map(([key, label]) => ({ key, label }));
 
 export const ADMIN_REPORT_DEFINITIONS: readonly AdminReportDefinition[] = [
-  { code: 'student_overview', label: 'Resumen por alumno', columns: columns(['student', 'Alumno'], ['student_number', 'Legajo'], ['courses', 'Cursos'], ['subjects', 'Materias'], ['sports', 'Deportes'], ['transport', 'Transporte'], ['dining', 'Comedor']) },
-  { code: 'students_by_course', label: 'Alumnos por curso', columns: columns(['educational_level', 'Nivel educativo'], ['course', 'Curso'], ['student_number', 'Legajo'], ['student', 'Alumno']) },
+  { code: 'student_overview', label: 'Resumen por alumno', columns: columns(['first_name', 'Nombre'], ['last_name', 'Apellido'], ['student', 'Alumno'], ['student_number', 'Legajo'], ['courses', 'Cursos'], ['subjects', 'Materias'], ['sports', 'Deportes'], ['transport', 'Transporte'], ['dining', 'Comedor']) },
+  { code: 'students_by_course', label: 'Alumnos por curso', columns: columns(['educational_level', 'Nivel educativo'], ['course', 'Curso'], ['student_number', 'Legajo'], ['last_name', 'Apellido'], ['first_name', 'Nombre'], ['student', 'Alumno']) },
   { code: 'students_by_subject', label: 'Alumnos por materia', columns: columns(['educational_level', 'Nivel educativo'], ['course', 'Curso'], ['subject', 'Materia'], ['teacher', 'Profesor'], ['student', 'Alumno'], ['student_number', 'Legajo']) },
   { code: 'teachers_by_level', label: 'Docentes por nivel', columns: columns(['educational_level', 'Nivel educativo'], ['teacher', 'Profesor'], ['subject', 'Materia'], ['course', 'Curso']) },
   { code: 'teachers_by_level_courses', label: 'Docentes, cursos y materias', columns: columns(['educational_level', 'Nivel educativo'], ['teacher', 'Profesor'], ['subject', 'Materia'], ['course', 'Curso'], ['academic_year', 'Año']) },
@@ -27,7 +27,18 @@ export const ADMIN_REPORT_DEFINITIONS: readonly AdminReportDefinition[] = [
 export type AdminReportFilters = { academic_year?: number; level_id?: string; sport_id?: string; route_id?: string };
 
 export async function getAdminReport(reportCode: AdminReportCode, filters: AdminReportFilters = {}): Promise<Array<Record<string, unknown>>> {
-  const { data, error } = await requireSupabase().rpc('get_admin_report', { p_report_code: reportCode, p_filters: filters });
+  const { data, error } = await requireSupabase().rpc('get_admin_report', { p_report_code: reportCode, p_filters: supportedReportFilters(reportCode, filters) });
   if (error) throw repositoryError(error.message);
   return Array.isArray(data) ? data as Array<Record<string, unknown>> : [];
+}
+
+// Match the deployed report families: no control claims a filter the SQL ignores.
+export function reportFilterKeys(code: AdminReportCode): Array<keyof AdminReportFilters> {
+  if (code === 'student_overview') return [];
+  if (code === 'students_by_transport' || code === 'transport_and_dining') return ['academic_year', 'route_id'];
+  if (code.startsWith('students_by_sport')) return ['academic_year', 'level_id', 'sport_id'];
+  return ['academic_year', 'level_id'];
+}
+export function supportedReportFilters(code: AdminReportCode, filters: AdminReportFilters): AdminReportFilters {
+  return Object.fromEntries(reportFilterKeys(code).filter(key => filters[key] !== undefined && filters[key] !== '').map(key => [key, filters[key]]));
 }

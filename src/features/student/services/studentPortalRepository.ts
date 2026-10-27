@@ -10,6 +10,7 @@ export interface PortalCourse {
   yearNumber: number | null;
   division: string | null;
   shift: string | null;
+  levelId: string | null;
   level: string | null;
 }
 
@@ -46,6 +47,8 @@ export interface PortalStudent {
   subjects: PortalSubject[];
   schedule: PortalScheduleItem[];
   services: PortalService[];
+  enrollmentRequestAcademicYear: number;
+  enrollmentRequestStatus: 'available' | 'enrolled' | 'pending' | 'already-requested' | 'unavailable';
 }
 
 interface StudentRow {
@@ -65,7 +68,7 @@ interface CourseEnrollmentRow {
     year_number: number | null;
     division: string | null;
     shift: string | null;
-    educational_level: Join<{ name: string }>;
+    educational_level: Join<{ id: string; name: string }>;
   }>;
 }
 
@@ -179,12 +182,13 @@ export async function loadStudentSports(studentId: string, signal: AbortSignal):
   });
 }
 
-async function loadStudent(student: StudentRow, relationship: string | null): Promise<PortalStudent> {
+async function loadStudent(student: StudentRow, relationship: string | null, fallbackAcademicYear: number): Promise<PortalStudent> {
+
   const supabase = requireSupabase();
   const [coursesResult, subjectsResult, sportsResult, transportResult, diningResult] = await Promise.all([
     supabase
       .from('student_enrollments')
-      .select('id,academic_year,course_id,course:courses(id,name,academic_year,year_number,division,shift,educational_level:educational_levels(name))')
+      .select('id,academic_year,course_id,course:courses(id,name,academic_year,year_number,division,shift,educational_level:educational_levels(id,name))')
       .eq('student_id', student.id)
       .eq('is_active', true)
       .order('academic_year', { ascending: false }),
@@ -217,6 +221,14 @@ async function loadStudent(student: StudentRow, relationship: string | null): Pr
   fail(diningResult.error);
 
   const courseEnrollments = (coursesResult.data ?? []) as CourseEnrollmentRow[];
+  const enrollmentRequestAcademicYear = courseEnrollments[0]?.academic_year ?? fallbackAcademicYear;
+  const requestStatusResult = await supabase.rpc('get_student_academic_enrollment_status', {
+    p_student_id: student.id,
+    p_academic_year: enrollmentRequestAcademicYear,
+  });
+  const enrollmentRequestStatus = requestStatusResult.error
+    ? 'unavailable'
+    : requestStatusResult.data as PortalStudent['enrollmentRequestStatus'];
   const subjectEnrollments = (subjectsResult.data ?? []) as SubjectEnrollmentRow[];
   const subjectIds = subjectEnrollments.map((item) => item.id);
   const courseIds = [...new Set(courseEnrollments.map((item) => item.course_id))];
@@ -295,6 +307,7 @@ async function loadStudent(student: StudentRow, relationship: string | null): Pr
         yearNumber: course.year_number,
         division: course.division,
         shift: course.shift,
+        levelId: level?.id ?? null,
         level: level?.name ?? null,
       }];
     }),
@@ -311,10 +324,12 @@ async function loadStudent(student: StudentRow, relationship: string | null): Pr
       };
     }),
     services,
+    enrollmentRequestAcademicYear,
+    enrollmentRequestStatus,
   };
 }
 
-export async function loadStudentPortal(profileId: string, role: 'student' | 'parent') {
+export async function loadStudentPortal(profileId: string, role: 'student' | 'parent', fallbackAcademicYear = new Date().getFullYear()) {
   const supabase = requireSupabase();
   const accessibleStudents = await getStudentIds(profileId, role);
   if (!accessibleStudents.length) return [] as PortalStudent[];
@@ -329,6 +344,6 @@ export async function loadStudentPortal(profileId: string, role: 'student' | 'pa
   const students = (data ?? []) as StudentRow[];
   return Promise.all(students.map((student) => {
     const relationship = accessibleStudents.find((item) => item.id === student.id)?.relationship ?? null;
-    return loadStudent(student, relationship);
+    return loadStudent(student, relationship, fallbackAcademicYear);
   }));
 }

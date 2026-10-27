@@ -4,7 +4,7 @@ export function one<T>(value: T | T[] | null | undefined): T | null {
 export interface TeacherStudent {
   id: string;
   student: { student_number: string | null; person: { first_name: string; last_name: string } | null } | null;
-  history: { id?: string; term: number; grade: number; notes: string | null }[];
+  history: { id: string; term: number; grade: number; notes: string | null; created_by: string | null }[];
 }
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 export function filterRoster(roster: TeacherStudent[], query: string) {

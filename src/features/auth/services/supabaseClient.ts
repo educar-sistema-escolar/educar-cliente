@@ -7,6 +7,10 @@ export const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 
 export const supabase = hasSupabaseConfig
   ? createClient(supabaseUrl!, supabaseAnonKey!, {
+      global: { fetch: (input, init) => {
+        const timeout = AbortSignal.timeout(15000);
+        return fetch(input, { ...init, signal: init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout });
+      } },
       auth: {
         autoRefreshToken: true,
         detectSessionInUrl: true,

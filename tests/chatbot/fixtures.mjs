@@ -27,6 +27,10 @@ export function repositoryClient({ overrides = {}, errors = {} } = {}) {
     ...serviceRows(), ...overrides,
   };
   const client = {
+    async rpc(name) {
+      if (name !== 'get_student_academic_enrollment_status') throw new Error(`Unexpected RPC: ${name}`);
+      return { data: 'available', error: null };
+    },
     from(table) {
       const filters = [];
       const query = {
