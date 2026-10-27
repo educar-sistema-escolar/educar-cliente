@@ -94,6 +94,9 @@ export type AcademicHistory = {
   grade: number;
   notes: string | null;
   created_at: string;
+  updated_at: string;
+  creator?: { full_name: string } | null;
+  editor?: { full_name: string } | null;
 };
 
 export type AcademicSchedule = {

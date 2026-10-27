@@ -45,7 +45,7 @@ export async function loadTeacherRoster(assignmentId: string): Promise<TeacherSt
   check(roster.error);
   const rows = roster.data ?? [];
   if (!rows.length) return [];
-  const history = await client.from('academic_history').select('id,student_subject_enrollment_id,term,grade,notes')
+  const history = await client.from('academic_history').select('id,student_subject_enrollment_id,term,grade,notes,created_by')
     .in('student_subject_enrollment_id', rows.map(row => row.id)).order('term');
   check(history.error);
   return rows.map(row => {
@@ -53,6 +53,17 @@ export async function loadTeacherRoster(assignmentId: string): Promise<TeacherSt
     return { id: row.id, student: student ? { ...student, person: one(student.person) } : null,
       history: (history.data ?? []).filter(record => record.student_subject_enrollment_id === row.id) };
   }).sort((a, b) => (a.student?.person?.last_name ?? '').localeCompare(b.student?.person?.last_name ?? '', 'es'));
+}
+export async function saveTeacherGrade(input: { enrollmentId: string; historyId: string | null; term: number; grade: number; notes: string }) {
+  const { error } = await requireSupabase().rpc('save_teacher_grade', {
+    p_enrollment_id: input.enrollmentId, p_history_id: input.historyId,
+    p_term: input.term, p_grade: input.grade, p_notes: input.notes,
+  });
+  if (error) {
+    if (error.code === '23505') throw new Error('Ya existe una nota para este período.');
+    if (error.code === '42501') throw new Error('No tenés permiso para modificar esta calificación.');
+    throw new Error('No se pudo guardar la calificación. Revisá los datos e intentá nuevamente.');
+  }
 }
 export async function loadTeacherSchedules(assignments: TeacherAssignment[]): Promise<TeacherSchedule[]> {
   if (!assignments.length) return [];
