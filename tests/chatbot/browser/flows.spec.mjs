@@ -263,6 +263,8 @@ for (const origin of ['/alumnos', '/alumnos/foro']) {
       await expect.poll(() => new URL(page.url()).pathname).toBe(path);
       if (heading) {
         const target = page.getByRole('heading', { name: heading, exact: true });
+        // Cross-route navigation loads the academic record before section focus can run.
+        await expect(target).toBeVisible({ timeout: 10000 });
         await expect(target).toBeInViewport();
         await expect.poll(() => target.evaluate(element => element === document.activeElement || element.closest('section, article')?.contains(document.activeElement))).toBe(true);
       }
