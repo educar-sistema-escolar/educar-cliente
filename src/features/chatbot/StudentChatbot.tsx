@@ -26,7 +26,7 @@ const emptyMessages = {
   sports: 'No tienes inscripciones deportivas registradas. Puedes consultar con administración qué actividades están disponibles.',
 };
 const field = (value: Field | undefined) => value === null || value === undefined || String(value).trim() === '' ? 'No informado' : String(value);
-const buttonClass = 'min-h-11 rounded-xl px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#176e68] disabled:cursor-wait disabled:opacity-60 motion-safe:transition-colors hover:bg-[#e4eee9] active:bg-[#d2e4dc]';
+const buttonClass = 'min-h-11 rounded-xl px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-edu-secondary disabled:cursor-wait disabled:opacity-60 motion-safe:transition-colors hover:bg-edu-light active:bg-edu-light/70';
 
 export function StudentChatbot(props: StudentChatbotProps) {
   // A validated account change creates an entirely fresh window, including in-flight request refs.
@@ -110,31 +110,31 @@ function ChatWindow({ studentName, onLookup, onNavigate, getErrorMessage }: Stud
   const actions = screen.buttons.filter(button => !controls.includes(button) && (button.action !== 'services' || (view !== 'myTransport' && view !== 'mySports') || query.status === 'success' || query.status === 'empty'));
   const showIntro = query.status !== 'loading' && query.status !== 'empty' && query.status !== 'error';
 
-  return <div className="fixed right-4 z-50 w-[min(380px,calc(100vw-2rem))] text-[#173b54]" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+  return <div className="fixed right-4 z-50 w-[min(380px,calc(100vw-2rem))] text-edu-dark" style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
     {open && <div ref={panel} id={panelId} role="dialog" aria-labelledby={`${panelId}-title`} tabIndex={-1} onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
-    }} className="flex max-h-[calc(100dvh-6.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-[24px] border border-[#d9ded8] bg-[#fffefa] shadow-[0_18px_60px_rgba(23,59,84,0.22)] outline-none">
-      <header className="flex shrink-0 items-center gap-3 bg-[#173b54] px-5 py-4 text-[#fffefa]">
-        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-[#f4cd6c]"><GraduationCap className="h-5 w-5" aria-hidden="true" /></span>
-        <div className="flex-1"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#bdd0cb]">Educar · Comunidad</p><h2 id={`${panelId}-title`} className="mt-0.5 text-base font-bold">Ayuda</h2></div>
-        <button type="button" aria-label="Cerrar ayuda" onClick={close} className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f4cd6c]"><X className="h-5 w-5" aria-hidden="true" /></button>
+    }} className="flex max-h-[calc(100dvh-6.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-[24px] border border-edu-border bg-white shadow-[0_18px_60px_rgba(23,59,84,0.22)] outline-none">
+      <header className="flex shrink-0 items-center gap-3 bg-edu-primary px-5 py-4 text-white">
+        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white"><GraduationCap className="h-5 w-5" aria-hidden="true" /></span>
+        <div className="flex-1"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80">Educar · Comunidad</p><h2 id={`${panelId}-title`} className="mt-0.5 text-base font-bold">Ayuda</h2></div>
+        <button type="button" aria-label="Cerrar ayuda" onClick={close} style={{ outlineColor: 'white' }} className="flex h-11 w-11 items-center justify-center rounded-xl hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"><X className="h-5 w-5" aria-hidden="true" /></button>
       </header>
       <div className="min-h-0 overflow-y-auto overscroll-contain px-5 py-5">
-        {showIntro && <p className="rounded-2xl rounded-tl-sm bg-[#f2f1e9] px-4 py-3 text-sm leading-6">{screen.message}</p>}
-        <p role="status" aria-live="polite" className="text-sm leading-6 text-[#5c6c6c]">{query.status === 'loading' ? 'Consultando tu información…' : ''}</p>
-        {query.status === 'error' && <div role="alert" className="rounded-2xl border border-[#ead9c5] bg-[#fbf1e7] p-4 text-sm leading-6"><p>{query.message}</p><button type="button" onClick={() => void lookup(query.topic)} className={`${buttonClass} mt-3 border border-[#d9ded8] bg-[#fffefa]`}>Reintentar</button></div>}
-        {query.status === 'empty' && <p className="rounded-2xl bg-[#f2f1e9] p-4 text-sm leading-6">{emptyMessages[query.topic]}</p>}
-        {query.status === 'success' && <ul className="mt-3 space-y-3">{query.result.topic === 'transport' ? query.result.items.map(item => <li key={item.id} className="rounded-2xl border border-[#e1e2d9] bg-[#f7f6f0] p-4"><dl className="space-y-2 text-sm"><div><dt className="text-xs text-[#556a63]">Recorrido</dt><dd className="break-words font-semibold">{field(item.routeName)} · {field(item.routeNumber)}</dd></div><div><dt className="text-xs text-[#556a63]">Parada</dt><dd className="break-words">{field(item.stop)}</dd></div><div><dt className="text-xs text-[#556a63]">Ciclo lectivo</dt><dd>{field(item.academicYear)}</dd></div></dl></li>) : query.result.items.map(item => <li key={item.id} className="rounded-2xl border border-[#e1e2d9] bg-[#f7f6f0] p-4"><dl className="space-y-2 text-sm"><div><dt className="text-xs text-[#556a63]">Deporte</dt><dd className="break-words font-semibold">{field(item.sport)}</dd></div><div><dt className="text-xs text-[#556a63]">Grupo</dt><dd className="break-words">{field(item.group)}</dd></div><div><dt className="text-xs text-[#556a63]">Ciclo lectivo</dt><dd>{field(item.academicYear)}</dd></div></dl></li>)}</ul>}
+        {showIntro && <p className="rounded-2xl rounded-tl-sm bg-edu-bg px-4 py-3 text-sm leading-6">{screen.message}</p>}
+        <p role="status" aria-live="polite" className="text-sm leading-6 text-edu-muted">{query.status === 'loading' ? 'Consultando tu información…' : ''}</p>
+        {query.status === 'error' && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6"><p>{query.message}</p><button type="button" onClick={() => void lookup(query.topic)} className={`${buttonClass} mt-3 border border-edu-border bg-white`}>Reintentar</button></div>}
+        {query.status === 'empty' && <p className="rounded-2xl bg-edu-bg p-4 text-sm leading-6">{emptyMessages[query.topic]}</p>}
+        {query.status === 'success' && <ul className="mt-3 space-y-3">{query.result.topic === 'transport' ? query.result.items.map(item => <li key={item.id} className="rounded-2xl border border-edu-border bg-edu-card p-4"><dl className="space-y-2 text-sm"><div><dt className="text-xs text-edu-muted">Recorrido</dt><dd className="break-words font-semibold">{field(item.routeName)} · {field(item.routeNumber)}</dd></div><div><dt className="text-xs text-edu-muted">Parada</dt><dd className="break-words">{field(item.stop)}</dd></div><div><dt className="text-xs text-edu-muted">Ciclo lectivo</dt><dd>{field(item.academicYear)}</dd></div></dl></li>) : query.result.items.map(item => <li key={item.id} className="rounded-2xl border border-edu-border bg-edu-card p-4"><dl className="space-y-2 text-sm"><div><dt className="text-xs text-edu-muted">Deporte</dt><dd className="break-words font-semibold">{field(item.sport)}</dd></div><div><dt className="text-xs text-edu-muted">Grupo</dt><dd className="break-words">{field(item.group)}</dd></div><div><dt className="text-xs text-edu-muted">Ciclo lectivo</dt><dd>{field(item.academicYear)}</dd></div></dl></li>)}</ul>}
         <div className="mt-4 grid gap-2">{actions.map(button => {
           const Icon = button.action === 'transport' ? Bus : button.action === 'sports' ? Trophy : button.action === 'sections' ? Compass : ArrowRight;
-          return <button key={button.action} type="button" onClick={() => choose(button.action)} className={`${buttonClass} flex items-center gap-3 border border-[#d9ded8] bg-white px-4 py-3 text-left text-[#145c58]`}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" /><span>{button.label}</span></button>;
+          return <button key={button.action} type="button" onClick={() => choose(button.action)} className={`${buttonClass} flex items-center gap-3 border border-edu-border bg-white px-4 py-3 text-left text-edu-primary`}><Icon className="h-4 w-4 shrink-0" aria-hidden="true" /><span>{button.label}</span></button>;
         })}</div>
       </div>
-      <footer className="flex shrink-0 items-center justify-between gap-1 border-t border-[#e5e5da] bg-[#f7f6f0] px-3 py-2">{controls.map(button => {
+      <footer className="flex shrink-0 items-center justify-between gap-1 border-t border-edu-border bg-edu-card px-3 py-2">{controls.map(button => {
         const Icon = button.action === 'home' ? Home : button.action === 'back' ? ArrowLeft : X;
-        return <button key={button.action} type="button" onClick={() => choose(button.action)} className={`${buttonClass} inline-flex items-center gap-1.5 text-[#47616c]`}><Icon className="h-3.5 w-3.5" aria-hidden="true" />{button.label}</button>;
+        return <button key={button.action} type="button" onClick={() => choose(button.action)} className={`${buttonClass} inline-flex items-center gap-1.5 text-edu-muted`}><Icon className="h-3.5 w-3.5" aria-hidden="true" />{button.label}</button>;
       })}</footer>
     </div>}
-    <button ref={launcher} type="button" aria-expanded={open} aria-controls={panelId} onClick={() => { if (open) close(); else { invalidate(); setView('home'); setOpen(true); } }} className="ml-auto mt-3 flex min-h-12 items-center gap-2 rounded-full bg-[#173b54] px-5 py-3 text-sm font-semibold text-[#fffefa] shadow-lg hover:bg-[#20536a] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#176e68]"><MessageCircle className="h-5 w-5 text-[#f4cd6c]" aria-hidden="true" />Ayuda</button>
+    <button ref={launcher} type="button" aria-expanded={open} aria-controls={panelId} onClick={() => { if (open) close(); else { invalidate(); setView('home'); setOpen(true); } }} className="ml-auto mt-3 flex min-h-12 items-center gap-2 rounded-full bg-edu-primary px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-edu-secondary-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-edu-secondary"><MessageCircle className="h-5 w-5 text-white" aria-hidden="true" />Ayuda</button>
   </div>;
 }

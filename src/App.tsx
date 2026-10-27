@@ -13,6 +13,7 @@ import {
   subscribeToSupabaseAuth,
   type SupabaseAccountSession,
 } from './features/auth/services/supabaseAuth';
+import { InstitutionalLoadingScreen } from './shared/components/layout/InstitutionalLoadingScreen';
 import { StudentPortalLayout } from './pages/student/StudentPortalLayout';
 import { ForoLayout } from './pages/foro/ForoLayout';
 
@@ -123,7 +124,7 @@ const SupabasePortalRoute = ({
   }, [invalidate]);
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center text-sm text-slate-500" role="status">Validando sesión institucional...</div>;
+    return <InstitutionalLoadingScreen />;
   }
 
   if (!session) return <Navigate to="/login" replace />;

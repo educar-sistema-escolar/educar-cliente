@@ -28,7 +28,7 @@ for (const mode of ['anonymous', 'demo', 'inactive', 'suspended']) {
 
 test('A03: pending authentication never flashes student chatbot', async ({ app, page }) => {
   app.state.authDelay = true; await page.goto('/alumnos', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('status')).toContainText('Validando sesión institucional...');
+  await expect(page.getByRole('status', { name: 'Cargando portal' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Ayuda', exact: true })).toHaveCount(0);
   app.state.authDelay = false; app.state.authPending.splice(0).forEach(resolve => resolve());
   await expect(page.getByText('Portal del alumno', { exact: true })).toBeVisible({ timeout: 10000 });

@@ -45,7 +45,7 @@ export function InstitutionalLayout({ role, title, user, items, community, signi
       {!!community?.length && <details open={community.some(item => location.pathname.startsWith(item.path)) || undefined} className="institutional-community"><summary><ChevronDown size={18} aria-hidden="true" />Comunidad</summary>{links(community)}</details>}
       <Link to="/" onClick={() => { if (drawer.current?.open) closeMenu(); }}><ArrowLeft size={19} aria-hidden="true" /><span>Sitio institucional</span></Link>
     </nav>
-    <div className="institutional-account"><strong>{user?.name || role}</strong>{user?.email && <span>{user.email}</span>}<small>{role} · Cuenta institucional</small>
+    <div className="institutional-account"><strong>{user?.name || user?.email || role}</strong>{user?.email && user.name && user.email !== user.name && <span>{user.email}</span>}<small>{role} · Cuenta institucional</small>
       <button type="button" disabled={signingOut} aria-busy={signingOut} onClick={onLogout}><LogOut size={18} aria-hidden="true" />{signingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}</button>
     </div>
   </>;
@@ -58,7 +58,6 @@ export function InstitutionalLayout({ role, title, user, items, community, signi
     <div className="institutional-workspace">
       <header className="institutional-header">
         <button ref={trigger} type="button" className="institutional-menu-trigger" aria-label={`Abrir menú de ${role}`} aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls="institutional-menu" onClick={() => drawer.current?.showModal()}><Menu size={22} aria-hidden="true" /></button>
-        <Link to="/" className="institutional-web" aria-label="Volver al sitio institucional"><ArrowLeft size={18} aria-hidden="true" /></Link>
         <div className="institutional-section-title"><strong>{title}</strong><span>Panel institucional</span></div>
         <span className="institutional-role">{role}</span>
       </header>

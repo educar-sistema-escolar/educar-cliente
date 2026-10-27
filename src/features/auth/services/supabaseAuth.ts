@@ -69,9 +69,28 @@ async function readAccountSession(options?: { strict?: boolean; signal?: AbortSi
     token: sessionData.session.access_token,
     role: role as AuthSession['role'],
     email: profile.email || authData.user.email || '',
-    name: profile.full_name || profile.email || authData.user.email || 'Usuario',
+    name: profile.full_name?.trim() && !profile.full_name.includes('@') ? profile.full_name.trim() : '',
     authSource: 'supabase',
   };
+}
+
+// This optional display lookup never grants access or changes the validated identity.
+export async function getStudentDisplayName(account: SupabaseAccountSession, signal: AbortSignal): Promise<string> {
+  const fallback = account.name.trim() && !account.name.includes('@') ? account.name.trim() : '';
+  if (account.role !== 'student') return fallback;
+  signal.throwIfAborted();
+  try {
+    const { data, error } = await withAuthTimeout(requireSupabase().from('people')
+      .select('first_name,last_name').eq('profile_id', account.profileId).eq('is_active', true)
+      .abortSignal(signal).maybeSingle());
+    signal.throwIfAborted();
+    if (error || !data) return fallback;
+    const name = [data.first_name, data.last_name].filter(part => typeof part === 'string').map(part => part.trim()).filter(Boolean).join(' ');
+    return name && !name.includes('@') ? name : fallback;
+  } catch (error) {
+    if (signal.aborted) throw error;
+    return fallback;
+  }
 }
 
 export async function loginInstitutionalUser(email: string, password: string): Promise<SupabaseAccountSession> {

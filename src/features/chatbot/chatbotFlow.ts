@@ -100,7 +100,7 @@ const navigationTargets: Record<ChatDestination, ChatNavigationTarget> = {
 export function getChatScreen(view: ChatView, studentName = ''): ChatScreen {
   const definition = screenDefinitions[view];
   return {
-    message: view === 'home' ? `Hola, ${studentName.trim() || 'estudiante'}. ${definition.message}` : definition.message,
+    message: view === 'home' ? `Hola, ${(!studentName.includes('@') && studentName.trim()) || 'estudiante'}. ${definition.message}` : definition.message,
     buttons: [
       ...definition.buttons.map(button => ({ ...button })),
       { action: 'home', label: 'Inicio' },

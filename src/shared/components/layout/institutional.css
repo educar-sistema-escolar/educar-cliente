@@ -71,7 +71,6 @@ body:has(.institutional-drawer[open]) { overflow: hidden; }
   .institutional-workspace { margin-left: 0; }
   .institutional-header { gap: 8px; padding: 10px 12px; }
   .institutional-header .institutional-menu-trigger { display: inline-flex; }
-  .institutional-header .institutional-web { display: none; }
   .institutional-section-title strong { font-size: 14px; }
   .institutional-role { font-size: 11px; padding: 6px 8px; max-width: 110px; }
   .institutional-content { padding: 20px 16px; }
