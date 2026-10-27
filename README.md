@@ -55,6 +55,10 @@ La terminal muestra la dirección local. Las páginas públicas no requieren ini
 | [educar-cliente](https://github.com/educar-sistema-escolar/educar-cliente) | Aplicación web, pruebas y estas guías |
 | [educar-servidor](https://github.com/educar-sistema-escolar/educar-servidor) | Migraciones SQL, RLS, funciones y operación del backend |
 
+## Automatización
+
+[GitHub Actions](https://github.com/educar-sistema-escolar/educar-cliente/actions/workflows/ci.yml) comprueba tipos, lint, pruebas y compilación en cada push y pull request hacia `main`. Chromium utiliza datos sintéticos, sin credenciales reales. El despliegue a Vercel queda preparado pero requiere activación y secretos; ver [CI/CD](docs/pruebas.md#github-actions) y [activación del despliegue](docs/despliegue.md#activar-cd-en-github-actions).
+
 ## Alcance documental
 
 Referencia: frontend `baa0ae8` y backend `main` en `01c2be8`, revisados el 27 de octubre de 2026. Las guías describen lo versionado; no certifican configuración ni disponibilidad remotas.

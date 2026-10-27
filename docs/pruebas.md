@@ -2,13 +2,13 @@
 
 ## Comprobaciones disponibles
 
-Existen pruebas ejecutables, pero **no se encontraron workflows de CI versionados** en los repositorios revisados. El código no acredita que cada push ejecute la suite o bloquee merges. La configuración externa del alojamiento debe verificarse por separado.
+El frontend incluye [un workflow de GitHub Actions](../.github/workflows/ci.yml) para ejecutar automáticamente los controles. La publicación del archivo no acredita una ejecución remota aprobada: comprobar el resultado en la pestaña **Actions** para cada commit.
 
 Desde la raíz del frontend:
 
 | Comando | Alcance |
 |---|---|
-| `npm test` | Node: acceso DEMO, reglas académicas/deportivas, informes y docentes |
+| `npm test` | Node: contrato CI/CD, acceso DEMO, reglas académicas/deportivas, informes y docentes |
 | `npm run test:existing` | Subconjunto docente; se superpone con `npm test` |
 | `npm run test:chatbot:unit` | Auth, nombre visible, repositorio, flujos, consultas y navegación |
 | `npm run test:chatbot:check` | Tipos de pruebas JS/TS y ESLint del arnés |
@@ -58,8 +58,22 @@ Se ejecuta desde el servidor, con requisitos propios; no hay un `npm test` raíz
 
 Las pruebas `tests/chatbot-*.test.mjs` de `feat/chatbot-tests` no están en el `main` del servidor revisado. No confundir resultados de esa rama con una suite publicada. Para permisos reales, utilizar un entorno aislado y sus roles, nunca credenciales privilegiadas en el navegador.
 
-## CI/CD pendiente
+## GitHub Actions
 
-Un pipeline futuro debería instalar, comprobar tipos/lint, ejecutar pruebas, compilar y desplegar únicamente un candidato aprobado; después, verificar rutas y roles. Es una recomendación, **no infraestructura implementada** por esta documentación.
+Se ejecuta en cualquier push, pull requests hacia `main` y manualmente con **Run workflow**. Utiliza Ubuntu, Node 22.17.1, `npm ci` y caché de npm; cancela ejecuciones anteriores de la misma referencia.
 
-Los informes históricos conservan ejecuciones anteriores: no sumar sus conteos como cobertura independiente ni presentarlos como una ejecución actual. Esta actualización documental verifica comandos y referencias, sin volver a ejecutar las suites funcionales.
+| Trabajo | Controles |
+|---|---|
+| `Quality and build` | Lint, `npm test`, unitarias del chatbot, comprobación de tipos/arnés y build |
+| `Chromium integration` | Instala Chromium y dependencias Linux; ejecuta componentes y aplicación completa, secuencialmente y con un worker |
+| `Deploy production` | Solo push a `main`, ambos trabajos aprobados y activación expresa; ver [requisitos de CD](despliegue.md#activar-cd-en-github-actions) |
+
+Las comprobaciones no usan secretos de producción. La compilación de control y el arnés integrado utilizan configuración sintética; **no se publica ese build**. Los resultados JSON, capturas y trazas sintéticas se conservan como artefactos durante siete días. No se suben archivos `.env`, dependencias ni salidas de Vercel.
+
+El workflow tiene permisos de lectura y las acciones oficiales están fijadas por SHA; revisar esas referencias y las versiones de Node/CLI al actualizar dependencias. El contrato `tests/ci-workflow.test.mjs` protege disparadores, comandos y separación del despliegue; no sustituye el validador de GitHub ni una ejecución real en Linux.
+
+Para impedir merges fallidos, un administrador debe configurar protección de `main` o un ruleset y exigir `Quality and build` y `Chromium integration` tras su primera ejecución. **El archivo no modifica esa protección.** Los pushes directos autorizados también pueden haber actualizado `main` antes de terminar CI.
+
+El backend es otro repositorio: estas acciones no aplican migraciones, prueban RLS real ni despliegan Edge Functions. Sus pruebas necesitan un pipeline propio y preparación aislada.
+
+Los informes históricos conservan ejecuciones anteriores: no sumar sus conteos como cobertura independiente ni presentarlos como una ejecución actual.
