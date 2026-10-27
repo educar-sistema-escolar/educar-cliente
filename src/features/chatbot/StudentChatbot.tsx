@@ -3,24 +3,9 @@ import { flushSync } from 'react-dom';
 import { ArrowLeft, ArrowRight, Bus, Compass, GraduationCap, Home, MessageCircle, Trophy, X } from 'lucide-react';
 import { getChatScreen, transitionChat, type ChatAction, type ChatNavigationTarget, type ChatView } from './chatbotFlow';
 
-export type ChatLookupTopic = 'transport' | 'sports';
+import type { ChatLookupTopic, ChatLookupResult } from './chatbotTypes';
+export type { ChatLookupTopic, ChatLookupResult, ChatTransportAssignment, ChatSportAssignment } from './chatbotTypes';
 type Field = string | number | null;
-export interface ChatTransportAssignment {
-  readonly id: string;
-  readonly routeName?: string | null;
-  readonly routeNumber?: Field;
-  readonly stop?: string | null;
-  readonly academicYear?: number | null;
-}
-export interface ChatSportAssignment {
-  readonly id: string;
-  readonly sport?: string | null;
-  readonly group?: string | null;
-  readonly academicYear?: number | null;
-}
-export type ChatLookupResult =
-  | { readonly topic: 'transport'; readonly items: readonly ChatTransportAssignment[] }
-  | { readonly topic: 'sports'; readonly items: readonly ChatSportAssignment[] };
 
 export interface StudentChatbotProps {
   readonly studentName: string;

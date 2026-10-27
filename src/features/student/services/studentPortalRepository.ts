@@ -1,4 +1,5 @@
 import { requireSupabase } from '../../auth/services/supabaseClient';
+import type { ChatSportAssignment, ChatTransportAssignment } from '../../chatbot/chatbotTypes';
 
 type Join<T> = T | T[] | null | undefined;
 
@@ -33,6 +34,7 @@ export interface PortalService {
   name: string;
   detail: string | null;
   academicYear: number;
+  routeNumber?: string | number | null;
 }
 
 export interface PortalStudent {
@@ -100,23 +102,30 @@ function fail(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
-async function getStudentIds(profileId: string, role: 'student' | 'parent') {
+export async function getStudentIds(profileId: string, role: 'student' | 'parent', signal?: AbortSignal) {
+  signal?.throwIfAborted();
   const supabase = requireSupabase();
 
   if (role === 'student') {
-    const { data: person, error: personError } = await supabase
+    const personQuery = supabase
       .from('people')
       .select('id')
       .eq('profile_id', profileId)
-      .maybeSingle();
+      .eq('is_active', true);
+    if (signal) personQuery.abortSignal(signal);
+    const { data: person, error: personError } = await personQuery.maybeSingle();
+    signal?.throwIfAborted();
     fail(personError);
     if (!person) return [] as Array<{ id: string; relationship: string | null }>;
 
-    const { data, error } = await supabase
+    const studentQuery = supabase
       .from('students')
       .select('id')
       .eq('person_id', person.id)
       .eq('is_active', true);
+    if (signal) studentQuery.abortSignal(signal);
+    const { data, error } = await studentQuery;
+    signal?.throwIfAborted();
     fail(error);
     return (data ?? []).map((student: { id: string }) => ({ id: student.id, relationship: null }));
   }
@@ -133,6 +142,41 @@ async function getStudentIds(profileId: string, role: 'student' | 'parent') {
     if (!relationships.has(link.student_id)) relationships.set(link.student_id, link.relationship_type);
   }
   return [...relationships].map(([id, relationship]) => ({ id, relationship }));
+}
+
+interface TransportEnrollmentRow {
+  id: string;
+  academic_year: number;
+  route: Join<{ name: string; route_number: number | string | null }>;
+  stop: Join<{ name: string }>;
+}
+
+function mapTransportAssignment(row: TransportEnrollmentRow): ChatTransportAssignment {
+  const route = first(row.route);
+  return { id: row.id, routeName: route?.name ?? null, routeNumber: route?.route_number ?? null, stop: first(row.stop)?.name ?? null, academicYear: row.academic_year };
+}
+
+export async function loadStudentTransport(studentId: string, signal: AbortSignal): Promise<ChatTransportAssignment[]> {
+  signal.throwIfAborted();
+  const { data, error } = await requireSupabase().from('student_transport_enrollments')
+    .select('id,academic_year,route:transport_routes(name,route_number),stop:transport_stops(name)')
+    .eq('student_id', studentId).eq('is_active', true).order('academic_year', { ascending: false }).abortSignal(signal);
+  signal.throwIfAborted();
+  fail(error);
+  return ((data ?? []) as TransportEnrollmentRow[]).map(mapTransportAssignment);
+}
+
+export async function loadStudentSports(studentId: string, signal: AbortSignal): Promise<ChatSportAssignment[]> {
+  signal.throwIfAborted();
+  const { data, error } = await requireSupabase().from('student_sport_enrollments')
+    .select('id,academic_year,sport_group:sport_groups(name,sport:sports(name))')
+    .eq('student_id', studentId).eq('is_active', true).order('academic_year', { ascending: false }).abortSignal(signal);
+  signal.throwIfAborted();
+  fail(error);
+  return (data ?? []).map((row: { id: string; academic_year: number; sport_group: Join<{ name: string; sport: Join<{ name: string }> }> }) => {
+    const group = first(row.sport_group);
+    return { id: row.id, sport: first(group?.sport)?.name ?? null, group: group?.name ?? null, academicYear: row.academic_year };
+  });
 }
 
 async function loadStudent(student: StudentRow, relationship: string | null): Promise<PortalStudent> {
@@ -225,10 +269,9 @@ async function loadStudent(student: StudentRow, relationship: string | null): Pr
       const sport = first(group?.sport);
       return { id: row.id, kind: 'Deporte' as const, name: sport?.name ?? 'Deporte', detail: group?.name ?? null, academicYear: row.academic_year };
     }),
-    ...(transportResult.data ?? []).map((row: { id: string; academic_year: number; route: Join<{ name: string; route_number: number }>; stop: Join<{ name: string }> }) => {
-      const route = first(row.route);
-      const stop = first(row.stop);
-      return { id: row.id, kind: 'Transporte' as const, name: route?.name ?? 'Transporte', detail: stop?.name ?? null, academicYear: row.academic_year };
+    ...(transportResult.data ?? []).map((row: TransportEnrollmentRow) => {
+      const assignment = mapTransportAssignment(row);
+      return { id: row.id, kind: 'Transporte' as const, name: assignment.routeName ?? 'Transporte', detail: assignment.stop ?? null, routeNumber: assignment.routeNumber, academicYear: row.academic_year };
     }),
     ...(diningResult.data ?? []).map((row: { id: string; academic_year: number; dining_service: Join<{ name: string }> }) => {
       const service = first(row.dining_service);

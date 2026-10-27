@@ -31,7 +31,7 @@ test('D01/D02/D04/D08/D09: actual mapper preserves active assignments across val
   assert.ok(student.services.every(row => !row.name.includes('INACTIVO')));
 });
 
-test('D03 RED: actual transport mapping must not discard the selected route number', async () => {
+test('D03: actual transport mapping preserves the selected route number', async () => {
   const { load } = await loadRepository();
   const [student] = await load();
   const transport = student.services.find(row => row.id === 'transport-2026');

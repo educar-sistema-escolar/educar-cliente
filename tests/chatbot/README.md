@@ -1,6 +1,6 @@
 # Student chatbot: RED-first contracts
 
-Step 1 originally added tests only. Later steps add pure conversation definitions and an isolated window; the chatbot is not mounted in the application and has no service integration, database schema or access policy changes.
+Step 1 originally added tests only. Later steps add pure conversation definitions, an isolated window and an authenticated read adapter. The chatbot is not mounted in the application; no database schema or access policy changes are included.
 
 ## Existing boundaries
 
@@ -170,3 +170,49 @@ The isolated fixture imports the actual component and injects controllable test-
 Ignored preview PNGs: `test-results/chatbot-desktop.png` and `test-results/chatbot-mobile.png`. The original 92 application-level browser contracts are untouched and remain unmounted/RED; backend/API environment limitations and authorization requirements are unchanged. Neither suite was rerun for this isolated component step.
 
 Rollback boundary: remove `StudentChatbot.tsx`, `tests/chatbot/component`, the component test script/type-check addition, and this section. The pure flow, previous unit/browser contracts and application routing remain unchanged. No new dependency was installed.
+
+## Authenticated personal-service reads (Step 4)
+
+Public API: `lookupStudentChatbotServices(topic, signal)` in `src/features/chatbot/chatbotRepository.ts`. It is compatible with the component's `onLookup` callback but is **not wired to the application yet**. It accepts only `'transport' | 'sports'` and an `AbortSignal`, never a caller-supplied profile/student ID. Shared DTOs now live in `chatbotTypes.ts`, outside React; component type reexports preserve existing consumers.
+
+The adapter validates the real Supabase account through `auth.getUser`, an active known student profile and an active profile→person→student link. Missing links are not successful empty results. Multiple active student links fail closed rather than selecting an arbitrary first row. Topic readers reuse the existing student repository, select only that student's active assignments and retain active prior-year labels. They do not load courses, grades, dining, the other service topic or the eager portal aggregate. Object/array/null joins normalize safely. The shared transport mapper preserves route name **and** route number (including zero); the old D03 regression is now GREEN, with the portal's existing name/detail fields unchanged.
+
+### Errors and cancellation
+
+All `ChatbotRepositoryError` messages are fixed, safe UI copy without SDK error text, tokens or logs.
+
+| Code | Meaning |
+|---|---|
+| `SESSION_REQUIRED` | Missing/invalid authentication, missing profile or inactive/unrecognized account. |
+| `STUDENT_REQUIRED` | Valid account belongs to a known nonstudent role. |
+| `LINKAGE_REQUIRED` | No active person/student link; distinct from no enrollments. |
+| `LINKAGE_AMBIGUOUS` | More than one active student link; no arbitrary selection. |
+| `QUERY_FAILED` | Auth/profile/identity/service SDK or network failure, never an empty success. |
+| `SESSION_CHANGED` | Post-read authentication/role/student identity differs or is revoked. |
+| `INVALID_TOPIC` | Unsupported runtime topic/identity payload; rejected before reads. |
+| `ABORTED` | Caller cancellation; error name is `AbortError`. |
+
+`getSupabaseAccountSession({ strict: true, signal })` is opt-in: safe query failures become errors for this adapter, while existing no-option callers keep their previous null/error behavior. The authoritative user is still obtained from `getUser`, not local session metadata or demo roles. A local session token alone never grants access.
+
+The signal is propagated to supported PostgREST `.abortSignal` queries and checked before/after awaited stages. Auth SDK operations are checked around their awaits; their transport is not claimed cancellable. After a service response, server-auth/profile and active linkage are read again before returning results, rejecting logout, A→B, role/profile revocation or changed student linkage. There is no persistent cache, auth-event subscription or host-session integration in this step. This is request-bound revalidation, not a substitute for backend RLS or the future host's live account lifecycle.
+
+### TDD and verification
+
+| Command / evidence | Observed result |
+|---|---|
+| Importable inert adapter, bounded RED smoke (`--test-name-pattern 'validates real auth\|cannot read services\|route number zero'`) | 15 behavioral assertion failures, 0 cancellations; no missing-module failure |
+| `node --experimental-vm-modules --test tests/chatbot/lookup.test.mjs` | 52 PASS / 0 failures or cancellations |
+| `npm run test:chatbot:unit` | 123 PASS; includes all previous 71 plus 52 new adapter checks; former route-number RED resolved |
+| `node --experimental-vm-modules --test tests/chatbot/flow.test.mjs` | 49 PASS |
+| `npm run test:chatbot:check` | PASS |
+| `npm run test:existing` | 4 PASS |
+| `npm run test:chatbot:component` | 18 PASS after DTO extraction |
+| `npm run build` and scoped changed-source/test ESLint | PASS; existing large-bundle warning |
+| Global `npm run lint` | Existing 4 errors / 4 warnings; no new diagnostics |
+| `git diff 55b3fed..HEAD --check` | PASS after the service-adapter commit |
+
+The first unrestricted inert-adapter run also had seven cancelled pending-query cases because the inert implementation never started those queries; these were not claimed product RED. The bounded smoke above established assertion-based RED before implementation, and the final full focused suite has no cancelled/skipped cases.
+
+Tests execute actual auth/repository/adapter modules in a VM with only the Supabase boundary mocked. They cover derived identity, active filters, topic isolation, safe joins, past years, route zero/null, strict-vs-legacy auth behavior, errors vs empty, abort and mid-query account/role/profile/person/student-link changes. The boundary exposes no write/RPC methods. **These tests do not prove database RLS**; no backend/API suite was rerun. The existing application browser suite remains unmounted/integration-RED, not executed here.
+
+Rollback boundary: remove `chatbotRepository.ts`/new lookup tests and this section; restore the previous component DTO declarations, optional auth strict mode and topic-reader additions. Reverting the shared transport mapping would intentionally restore the previous D03 regression. No App/layout mount, navigation adapter, backend/schema/policy or dependency changes were made.
