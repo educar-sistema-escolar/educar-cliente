@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "strict": false,
+    "noEmit": true,
+    "module": "nodenext",
+    "target": "es2023",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "maxNodeModuleJsDepth": 0,
+    "paths": { "punycode": ["./node_modules/@types/node/punycode.d.ts"] },
+    "baseUrl": "../..",
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["./**/*.mjs", "../../playwright.config.mjs"]
+}

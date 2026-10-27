@@ -1,0 +1,5 @@
+{
+  "extends": "../../../tsconfig.app.json",
+  "compilerOptions": { "tsBuildInfoFile": "../../../node_modules/.tmp/chatbot-component.tsbuildinfo" },
+  "include": ["./harness.tsx", "../../../src/features/chatbot/*.ts", "../../../src/features/chatbot/*.tsx"]
+}

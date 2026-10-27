@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowRight,
@@ -14,8 +14,10 @@ import {
   Sparkles,
   Utensils,
 } from 'lucide-react';
-import { getSupabaseAccountSession } from '../../features/auth/services/supabaseAuth';
+import { usePortalSession } from '../../features/auth/services/portalSessionContext';
+import { studentSectionFromHash } from '../../features/student/services/studentPortalNavigation';
 import { listAvailableEnrollmentYears } from '../../features/inscripcion/services/enrollmentStore';
+
 import {
   loadStudentPortal,
   type PortalService,
@@ -44,6 +46,9 @@ function courseLabel(course: PortalStudent['courses'][number]) {
 }
 
 export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = ({ audience }) => {
+  const portal = usePortalSession();
+  const account = portal?.account;
+  const location = useLocation();
   const [students, setStudents] = useState<PortalStudent[]>([]);
   const [availableAcademicYears, setAvailableAcademicYears] = useState<number[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -57,7 +62,6 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
 
     void (async () => {
       try {
-        const account = await getSupabaseAccountSession();
         if (!account || (audience === 'student' ? account.role !== 'student' : account.role !== 'parent')) {
           throw new Error('No se pudo validar la cuenta institucional. Iniciá sesión nuevamente.');
         }
@@ -84,9 +88,20 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
     })();
 
     return () => { mounted = false; };
-  }, [audience, reloadVersion]);
+  }, [audience, reloadVersion, account]);
 
   const selectedStudent = students.find((student) => student.id === selectedStudentId) ?? null;
+  useEffect(() => {
+    const id = studentSectionFromHash(location.hash);
+    if (audience !== 'student' || isLoading || !id) return;
+    const target = document.getElementById(id);
+    const fallback = document.getElementById('institutional-content');
+    const notice = document.getElementById('student-navigation-status');
+    if (notice) notice.textContent = target ? '' : error ? 'No pudimos abrir esta sección. Intenta cargar tu ficha nuevamente.' : 'Esta sección estará disponible cuando tu legajo esté vinculado. Comunícate con administración.';
+    const destination = target ?? fallback;
+    destination?.focus({ preventScroll: true });
+    destination?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }, [audience, isLoading, location.hash, location.key, selectedStudent?.id, error]);
   const currentCourse = selectedStudent?.courses[0] ?? null;
   const orderedSchedule = [...(selectedStudent?.schedule ?? [])].sort((left, right) => left.day - right.day || left.startsAt.localeCompare(right.startsAt));
   const academicYear = currentCourse?.academicYear ?? selectedStudent?.enrollmentRequestAcademicYear ?? new Date().getFullYear();
@@ -254,7 +269,8 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-edu-light text-edu-primary"><BookOpen className="h-5 w-5" aria-hidden="true" /></span>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-edu-muted">Aprendizajes</p>
-                  <h2 className="mt-1 text-xl font-bold tracking-tight text-edu-primary">Materias y calificaciones</h2>
+                  <h2 id="student-notes" tabIndex={-1} className="mt-1 scroll-mt-6 text-xl font-bold tracking-tight text-edu-primary outline-none">Materias y calificaciones</h2>
+
                 </div>
               </div>
               {selectedStudent.subjects.length ? (
@@ -285,7 +301,8 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-edu-light text-edu-primary"><CalendarDays className="h-5 w-5" aria-hidden="true" /></span>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-edu-muted">Organización semanal</p>
-                  <h2 className="mt-1 text-xl font-bold tracking-tight text-edu-primary">Horario de clases</h2>
+                  <h2 id="student-schedule" tabIndex={-1} className="mt-1 scroll-mt-6 text-xl font-bold tracking-tight text-edu-primary outline-none">Horario de clases</h2>
+
                 </div>
               </div>
               {orderedSchedule.length ? (
@@ -310,7 +327,8 @@ export const StudentPortalPage: React.FC<{ audience: 'student' | 'family' }> = (
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-edu-light text-edu-primary"><MapPin className="h-5 w-5" aria-hidden="true" /></span>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-edu-muted">Acompañamiento</p>
-                  <h2 className="mt-1 text-xl font-bold tracking-tight text-edu-primary">Servicios activos</h2>
+                  <h2 id="student-services" tabIndex={-1} className="mt-1 scroll-mt-6 text-xl font-bold tracking-tight text-edu-primary outline-none">Servicios activos</h2>
+
                 </div>
               </div>
               {selectedStudent.services.length ? (

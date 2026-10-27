@@ -17,29 +17,48 @@ interface AuthenticatedProfile {
   account_status: string;
 }
 
-export async function getSupabaseAccountSession(): Promise<SupabaseAccountSession | null> {
-  try { return await withAuthTimeout(readAccountSession()); }
-  catch { return null; }
+export async function getSupabaseAccountSession(options?: { strict?: boolean; signal?: AbortSignal }): Promise<SupabaseAccountSession | null> {
+  options?.signal?.throwIfAborted();
+  try {
+    const account = await withAuthTimeout(readAccountSession(options));
+    options?.signal?.throwIfAborted();
+    return account;
+  } catch (error) {
+    if (options?.strict || options?.signal?.aborted) throw error;
+    return null;
+  }
 }
 
-async function readAccountSession(): Promise<SupabaseAccountSession | null> {
+async function readAccountSession(options?: { strict?: boolean; signal?: AbortSignal }): Promise<SupabaseAccountSession | null> {
   if (!supabase) return null;
 
   const client = requireSupabase();
   const { data: authData, error: authError } = await client.auth.getUser();
-  const { data: sessionData } = await client.auth.getSession();
+  options?.signal?.throwIfAborted();
+  if (authError && options?.strict && authError.name !== 'AuthSessionMissingError' && authError.status !== 401 && authError.status !== 403) {
+    throw new Error('No se pudo validar la sesión institucional.');
+  }
+  const { data: sessionData, error: sessionError } = await client.auth.getSession();
+  options?.signal?.throwIfAborted();
+  if (sessionError && options?.strict) {
+    if (sessionError.name === 'AuthSessionMissingError') return null;
+    throw new Error('No se pudo validar la sesión institucional.');
+  }
 
   if (authError || !authData.user || !sessionData.session) return null;
 
-  const { data, error } = await client
+  const profileQuery = client
     .from('profiles')
     .select('id,email,full_name,role,is_active,account_status')
-    .eq('id', authData.user.id)
-    .maybeSingle();
+    .eq('id', authData.user.id);
+  if (options?.signal) profileQuery.abortSignal(options.signal);
+  const { data, error } = await profileQuery.maybeSingle();
+  options?.signal?.throwIfAborted();
+  if (error && options?.strict) throw new Error('No se pudo validar la cuenta institucional.');
 
   if (error || !data) return null;
   const profile = data as AuthenticatedProfile;
-  if (!profile.is_active || profile.account_status !== 'active') return null;
+  if (profile.id !== authData.user.id || !profile.is_active || profile.account_status !== 'active') return null;
 
   const role = resolveInstitutionalRole(profile.role);
   if (!role) return null;
@@ -106,9 +125,12 @@ export async function updateSupabasePassword(password: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-export function subscribeToSupabaseAuth(callback: () => void) {
+export function subscribeToSupabaseAuth(callback: () => void, onInvalidate?: () => void) {
   if (!supabase) return () => undefined;
-  const { data } = supabase.auth.onAuthStateChange(() => {
+  const { data } = supabase.auth.onAuthStateChange(event => {
+    // The portal owns its initial read; invalidation must run before deferred SDK queries.
+    if (onInvalidate && event === 'INITIAL_SESSION') return;
+    onInvalidate?.();
     window.setTimeout(callback, 0);
   });
   return () => data.subscription.unsubscribe();

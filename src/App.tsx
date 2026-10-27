@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useLocation } from 'react-router-dom';
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
+import { PortalSessionContext } from './features/auth/services/portalSessionContext';
 import { MainLayout } from './shared/components/layout/MainLayout';
 import { ScrollToTop } from './shared/components/ScrollToTop';
 import { AdminLayout } from './pages/admin/AdminLayout';
@@ -89,24 +91,36 @@ const SupabasePortalRoute = ({
 }) => {
   const [session, setSession] = useState<SupabaseAccountSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const generation = useRef(0);
+  const refreshSession = useRef<() => void>(() => undefined);
+  const invalidate = useCallback(() => {
+    generation.current += 1;
+    flushSync(() => { setSession(null); setLoading(true); });
+  }, []);
+  const revalidate = useCallback(() => { invalidate(); refreshSession.current(); }, [invalidate]);
 
   useEffect(() => {
     let mounted = true;
     const refresh = async () => {
-      const account = await getSupabaseAccountSession();
-      if (mounted) {
+      const request = ++generation.current;
+      let account: SupabaseAccountSession | null = null;
+      try { account = await getSupabaseAccountSession(); } catch { /* Authentication failure stays closed. */ }
+      if (mounted && request === generation.current) {
         setSession(account);
         setLoading(false);
       }
     };
 
+    refreshSession.current = () => void refresh();
+    const unsubscribe = subscribeToSupabaseAuth(() => void refresh(), invalidate);
     void refresh();
-    const unsubscribe = subscribeToSupabaseAuth(() => void refresh());
     return () => {
       mounted = false;
+      generation.current += 1;
+      refreshSession.current = () => undefined;
       unsubscribe();
     };
-  }, []);
+  }, [invalidate]);
 
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center text-sm text-slate-500" role="status">Validando sesión institucional...</div>;
@@ -115,7 +129,7 @@ const SupabasePortalRoute = ({
   if (!session) return <Navigate to="/login" replace />;
   if (!allowedRoles.includes(session.role)) return <Navigate to={getRoleHomePath(session.role)} replace />;
 
-  return <>{children}</>;
+  return <PortalSessionContext.Provider key={session.profileId} value={{ account: session, invalidate, revalidate }}>{children}</PortalSessionContext.Provider>;
 };
 
 const LegacyForumRedirect = () => {
