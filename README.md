@@ -1,161 +1,62 @@
-# Plataforma Web — Educar para Transformar (Frontend)
+# Educar para Transformar — plataforma web
 
-Este repositorio contiene la interfaz de usuario moderna, modular y responsiva para la plataforma de la institución educativa **Educar para Transformar** de Resistencia, Chaco. Desarrollada con **React, TypeScript, Vite y Tailwind CSS v4**, la estructura está optimizada para ser fácilmente escalable por cualquier miembro del equipo técnico.
+Aplicación institucional para consultar y gestionar el recorrido escolar: sitio público, administración, portal docente, portal de estudiantes y portal de familias. Este repositorio contiene el **frontend**; la base de datos, las políticas de acceso y las funciones de servidor se mantienen por separado.
 
----
-📋 Requisitos Previos
+## Comenzar
 
-Antes de iniciar, asegurate de tener instalado:
+1. Instalar Git, npm y una versión compatible de Node.js. La referencia utilizada es **Node 22.17.1**; consultar [instalación](docs/instalacion.md).
+2. Clonar e instalar:
 
-Node.js (versión recomendada: 20+)
-npm (incluido con Node.js)
-Un editor de código como:
-VS Code
-Cursor
-Antigravity
-
-Verificá las versiones ejecutando:
-
-node -v
-npm -v
-📂 ¿En qué carpeta se ejecutan los comandos?
-
-Todos los comandos deben ejecutarse dentro de la carpeta raíz del frontend.
-
-Ejemplo:
-
-frontend/
-├── src/
-├── public/
-├── package.json
-├── vite.config.ts
-└── tsconfig.json
-
-La carpeta correcta es la que contiene el archivo:
-
-package.json
-
-2. Ingresar a la carpeta del proyecto
-   
-cd desktop/educarparatransformar/frontend
-
-4. Instalar dependencias
-   
-Este comando descarga React, Vite, Tailwind y todas las librerías necesarias.
-
-npm install
-
----
-
-## 🛠️ Filosofía de Desarrollo y Comentarios
-Todo el código fuente ha sido escrito con un enfoque puramente profesional y humano.
-- **Sin comentarios artificiales:** No vas a encontrar comentarios genéricos o marcas de agua de IA (como `"AI generated"` o explicaciones obvias de importaciones de React).
-- **Comentarios con propósito:** Los comentarios en el código explican exclusivamente flujos lógicos específicos, simulaciones de estados de carga, validaciones personalizadas o la estructura de secciones clave.
-
----
-
-## 📂 Arquitectura de Directorios
-
-La estructura de carpetas sigue un patrón modular limpio para facilitar el mantenimiento y la delegación de tareas:
-
-```bash
-src/
-├── pages/                  # Vistas principales de la aplicación
-│   ├── about/              # Sección "Quiénes Somos"
-│   │   └── AboutPage.tsx
-│   ├── home/               # Página de Inicio (Sección Principal)
-│   │   ├── HomePage.tsx
-│   │   └── components/     # Componentes locales de la pantalla de inicio
-│   │       ├── Hero.tsx
-│   │       ├── GallerySection.tsx
-│   │       ├── ContactSection.tsx
-│   │       └── TestimonialsSection.tsx
-│   ├── levels/             # Oferta Académica por Niveles
-│   │   └── LevelsPage.tsx
-│   ├── news/               # Portal de Noticias y Filtros
-│   │   └── NewsPage.tsx
-│   ├── jobs/               # Portal de Empleo y Envío de CV (PDF)
-│   │   └── JobsPage.tsx
-│   ├── login/              # Acceso Privado para Familias y Personal
-│   │   └── LoginPage.tsx
-│   └── BienestarPage.tsx   # Portal de Bienestar y FAQ Interactivo
-│
-├── shared/                 # Componentes y utilidades de uso global
-│   └── components/
-│       └── layout/         # Estructura base de navegación de la app
-│           ├── Header.tsx      # Barra superior de navegación SPA
-│           ├── Footer.tsx      # Pie de página responsivo de 3 columnas
-│           └── MainLayout.tsx  # Contenedor común y transiciones
-│
-├── App.tsx                 # Enrutamiento centralizado de la app
-├── index.css               # Directivas de Tailwind CSS v4 y variables de tema
-└── main.tsx                # Punto de entrada de React
+```sh
+git clone https://github.com/educar-sistema-escolar/educar-cliente.git
+cd educar-cliente
+npm ci
 ```
 
----
+3. Copiar `.env.example` a `.env.local`, configurar el proyecto Supabase de desarrollo y ejecutar `npm run dev`. En PowerShell:
 
-## 🌟 Detalle de Funcionalidades Implementadas
+```powershell
+Copy-Item .env.example .env.local
+npm run dev
+```
 
-1. **Navegación Fluida (SPA):** Gracias a `react-router-dom`, las transiciones entre páginas son instantáneas sin recargar el navegador. Se configuró el `<Header />` y `<Footer />` globales utilizando el componente de enrutamiento `<Link>`.
-2. **Muro de Opiniones Reactivo (`HomePage.tsx`):** Un sistema dinámico donde los usuarios pueden redactar un comentario y enviarlo en vivo. El comentario se añade instantáneamente a la pantalla con formato de fecha real, ideal para conectar posteriormente con una API de base de datos.
-3. **Timeline Histórico (`AboutPage.tsx`):** Un recorrido temporal estilizado desde 1998 hasta 2024 utilizando bordes continuos y micro-detalles responsivos.
-4. **Buscador y Filtrado Dinámico de Noticias (`NewsPage.tsx`):** Los usuarios pueden buscar noticias por título en tiempo real y segmentarlas por categorías (**Todas**, **Institucional**, **Deportes**, **Eventos**).
-5. **Cargador Drag-and-Drop de Archivos (`JobsPage.tsx`):** Formulario laboral con selector dinámico de puestos y un área interactiva para soltar o seleccionar el CV en formato PDF, con validación de peso (máx. 5MB) y extensión.
-6. **Simulación de Autenticación Segura (`LoginPage.tsx`):** Selector de tipo de perfil (Familia/Personal) con una simulación realista de inicio de sesión que incluye un spinner de carga activa y mensaje de bienvenida interactivo.
+La terminal muestra la dirección local. Las páginas públicas no requieren iniciar sesión; los portales necesitan una cuenta institucional activa y sus vinculaciones. Configurar variables **no crea** usuarios ni aplica migraciones.
 
----
+## Elegir una guía
 
-## 🚀 Guía para Escalar la Aplicación
+| Necesidad | Documento |
+|---|---|
+| Preparar el entorno y las cuentas | [Instalación y configuración](docs/instalacion.md) |
+| Comprender módulos, rutas y límites | [Arquitectura y funcionalidades](docs/arquitectura.md) |
+| Ejecutar y comprender las pruebas | [Pruebas y estado de CI/CD](docs/pruebas.md) |
+| Publicar y mantener el sistema | [Despliegue y operación](docs/despliegue.md) |
 
-Si necesitás expandir o modificar la aplicación en el futuro, seguí estas pautas de buenas prácticas:
+## Módulos principales
 
-### 1. ¿Cómo agregar una nueva ruta/página?
-1. Crea el componente de tu página en `src/pages/nom-pagina/MiPagina.tsx`.
-2. Importa tu componente en `src/App.tsx`.
-3. Registra la nueva ruta dentro del bloque `<Routes>`:
-   ```tsx
-   <Route path="/mi-nueva-ruta" element={<MiPagina />} />
-   ```
-4. Actualiza los enlaces en `Header.tsx` o `Footer.tsx` utilizando `<Link to="/mi-nueva-ruta">`.
+| Área | Acceso | Capacidades |
+|---|---|---|
+| Sitio institucional | Público | Información, noticias, opiniones, contacto, empleo y solicitud de inscripción |
+| Administración | `superadmin` | Cuentas, estructura académica, inscripciones, servicios, facturación y reportes |
+| Docentes | `teacher` | Materias, estudiantes, calificaciones, exportación CSV y agenda |
+| Estudiantes | `student` | Notas, horarios, servicios, foro y asistente de ayuda de solo consulta |
+| Familias | `parent` / `guardian` | Fichas vinculadas, información académica y solicitudes de servicios |
 
-### 2. Uso y Modificación de Colores (Tailwind CSS v4)
-En Tailwind CSS v4, el tema se declara directamente en `src/index.css` mediante la directiva `@theme`. No existe un archivo `tailwind.config.js` externo.
-- Para cambiar los colores institucionales globales, modifica las variables dentro de `@theme` en `src/index.css`:
-  ```css
-  @theme {
-    --color-edu-primary: #1a5276;    /* Azul Oscuro Principal */
-    --color-edu-secondary: #2e86c1;  /* Azul Vibrante */
-    --color-edu-accent: #a9cce3;     /* Azul Claro */
-    --color-edu-light: #d6eaf8;      /* Fondo Suave */
-  }
-  ```
-- Al escribir clases en tus componentes, consumilas de forma natural: `className="bg-edu-primary text-edu-accent"`.
+**No todo utiliza el mismo almacenamiento.** Noticias, opiniones y comentarios públicos tienen implementaciones locales en el navegador; contacto y empleo preparan correos. No deben confundirse con operaciones persistidas en Supabase. Ver [límites funcionales](docs/arquitectura.md).
 
-### 3. Conexión de Formularios con un Backend
-Todos los formularios (`ContactSection`, `TestimonialsSection`, `JobsPage`, `LoginPage`) cuentan con estados de React locales (`useState`) ya configurados y funciones de envío (`onSubmit`).
-- Para conectarlos con un servidor en el futuro, solo debés reemplazar el código simulado por una petición HTTP real utilizando `fetch` o `axios`:
-  ```typescript
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('https://api.tucolegio.edu.ar/endpoint', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      if (response.ok) setIsSubmitted(true);
-    } catch (err) {
-      setError('Hubo un error al procesar la solicitud.');
-    }
-  };
-  ```
+## Tecnología y repositorios
 
----
+- React 19, TypeScript 6, Vite 8 y React Router 7.
+- Tailwind CSS 4, componentes propios, Lucide y Framer Motion.
+- Supabase Auth, PostgreSQL, RPC y Edge Functions.
+- Node Test Runner y Playwright para verificación automatizable.
 
-## 💻 Comandos Útiles para el Desarrollo
+| Repositorio | Responsabilidad |
+|---|---|
+| [educar-cliente](https://github.com/educar-sistema-escolar/educar-cliente) | Aplicación web, pruebas y estas guías |
+| [educar-servidor](https://github.com/educar-sistema-escolar/educar-servidor) | Migraciones SQL, RLS, funciones y operación del backend |
 
-Para correr el proyecto localmente o generar un paquete listo para producción:
+## Alcance documental
 
-- **Iniciar Servidor de Desarrollo:** `npm run dev`
-- **Compilar en TypeScript y Empaquetar para Producción:** `npm run build`
-- **Previsualizar la Compilación de Producción:** `npm run preview`
+Referencia: frontend `baa0ae8` y backend `main` en `01c2be8`, revisados el 27 de octubre de 2026. Las guías describen lo versionado; no certifican configuración ni disponibilidad remotas.
+
+Los informes `RESUMEN_ETAPA_*`, auditorías anteriores y [contratos históricos del chatbot](tests/chatbot/README.md) conservan evidencia de etapas concretas. Para el estado actual, comenzar por estas guías; un resultado histórico no sustituye una ejecución nueva.
