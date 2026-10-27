@@ -464,14 +464,17 @@ export async function updateAcademicHistory(
 
 const scheduleSelect = 'id, course_id, course_subject_id, academic_year, day_of_week, starts_at, ends_at, is_active, course:courses(id, name), course_subject:course_subjects(id, subject:subjects(name))';
 
+function normalizeSchedule(row: unknown): AcademicSchedule {
+  const item = row as AcademicSchedule & { course?: Relation<AcademicSchedule['course']>; course_subject?: Relation<AcademicSchedule['course_subject']> };
+  const courseSubject = one(item.course_subject);
+  return { ...item, course: one(item.course), course_subject: courseSubject ? { ...courseSubject, subject: one(courseSubject.subject) } : null };
+}
+
 export async function listAcademicSchedules(): Promise<AcademicSchedule[]> {
   const { data, error } = await requireSupabase().from('academic_schedules').select(scheduleSelect)
     .order('academic_year', { ascending: false }).order('day_of_week').order('starts_at');
   if (error) throw repositoryError(error.message);
-  return (data ?? []).map((row) => {
-    const item = row as unknown as AcademicSchedule & { course?: Array<AcademicSchedule['course']>; course_subject?: Array<AcademicSchedule['course_subject']> };
-    return { ...item, course: item.course?.[0] ?? null, course_subject: item.course_subject?.[0] ?? null } as AcademicSchedule;
-  });
+  return (data ?? []).map(normalizeSchedule);
 }
 
 export async function createAcademicSchedule(input: Omit<Pick<AcademicSchedule, 'course_id' | 'course_subject_id' | 'academic_year' | 'day_of_week' | 'starts_at' | 'ends_at'>, never> & {
@@ -480,15 +483,13 @@ export async function createAcademicSchedule(input: Omit<Pick<AcademicSchedule, 
   const { data, error } = await requireSupabase().from('academic_schedules').insert({ ...input, course_subject_id: input.course_subject_id || null })
     .select(scheduleSelect).single();
   if (error) throw repositoryError(error.message);
-  const item = data as unknown as AcademicSchedule & { course?: Array<AcademicSchedule['course']>; course_subject?: Array<AcademicSchedule['course_subject']> };
-  return { ...item, course: item.course?.[0] ?? null, course_subject: item.course_subject?.[0] ?? null } as AcademicSchedule;
+  return normalizeSchedule(data);
 }
 
 export async function updateAcademicSchedule(id: string, input: Partial<Pick<AcademicSchedule, 'course_id' | 'course_subject_id' | 'academic_year' | 'day_of_week' | 'starts_at' | 'ends_at' | 'is_active'>>): Promise<AcademicSchedule> {
   const { data, error } = await requireSupabase().from('academic_schedules').update(input).eq('id', id).select(scheduleSelect).single();
   if (error) throw repositoryError(error.message);
-  const item = data as unknown as AcademicSchedule & { course?: Array<AcademicSchedule['course']>; course_subject?: Array<AcademicSchedule['course_subject']> };
-  return { ...item, course: item.course?.[0] ?? null, course_subject: item.course_subject?.[0] ?? null } as AcademicSchedule;
+  return normalizeSchedule(data);
 }
 
 export async function deleteAcademicSchedule(id: string): Promise<void> {
